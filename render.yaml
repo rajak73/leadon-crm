@@ -1,0 +1,36 @@
+services:
+  # Backend API
+  - type: web
+    name: leados-api
+    env: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @leados/api build
+    startCommand: pnpm --filter @leados/api start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: FLAG_AI_SCORING_ENABLED
+        value: "true"
+      - key: AI_PROVIDER
+        value: "groq"
+      - key: GROQ_API_KEY
+        sync: false
+
+  # Frontend Web
+  - type: web
+    name: leados-web
+    env: static
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @leados/web build
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
