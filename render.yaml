@@ -4,7 +4,7 @@ services:
     name: leados-api
     env: node
     plan: free
-    buildCommand: pnpm install && pnpm --filter @leados/api build
+    buildCommand: pnpm install --prod=false && pnpm --filter @leados/api build
     startCommand: pnpm --filter @leados/api start
     envVars:
       - key: NODE_ENV
@@ -29,7 +29,7 @@ services:
     name: leados-web
     env: static
     plan: free
-    buildCommand: pnpm install && pnpm --filter @leados/web build
+    buildCommand: pnpm install --prod=false && pnpm --filter @leados/web build
     staticPublishPath: apps/web/dist
     envVars:
       - key: VITE_API_URL
