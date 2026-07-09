@@ -18,32 +18,23 @@ swapping env vars only — no code changes (BRD §14, §19.3).
 
 Everything above stays free at launch. You only pay when you outgrow it.
 
----
+## 2. Deploy steps (One-Click Blueprint)
 
-## 2. Deploy steps
+We have included a `render.yaml` Blueprint file that fully automates the Render setup.
 
-### A. Database (Neon, free)
-1. Create a Neon project → copy the **pooled** connection string (`...-pooler...`).
-2. In `apps/api/prisma/schema.prisma` set `provider = "postgresql"`.
-3. Set `DATABASE_URL` with a small pool:
-   `...&connection_limit=5&pool_timeout=20`
-4. Run migrations: `pnpm --filter @leados/api prisma:generate && npx prisma db push`.
+1. Go to **Render.com** and sign in with GitHub.
+2. Click **New +** -> **Blueprint** and select your GitHub repository.
+3. Render will ask you for the following environment variables (do **NOT** commit these values to GitHub, paste them directly into the Render dashboard):
+   - `DATABASE_URL`: Your Neon Postgres connection string
+   - `REDIS_URL`: Your Upstash Redis connection string
+   - `GROQ_API_KEY`: Your Groq AI key
+   - `VITE_API_URL`: Leave blank for now!
 
-### B. API (Render free web service)
-- Build: `pnpm install && pnpm --filter @leados/api build`
-- Start: `pnpm --filter @leados/api start`
-- Env: `NODE_ENV=production`, `JWT_SECRET`, `DATABASE_URL`, `CRON_SECRET`, `WEB_ORIGIN`.
+4. Click **Apply** to build both the API and the Web service.
 
-### C. Web (Render free static site)
-- Build: `pnpm install && pnpm --filter @leados/web build`
-- Publish dir: `apps/web/dist`
-- Env: `VITE_API_URL=https://<your-api>.onrender.com`
-
-### D. Queue drain (cron-job.org, free)
-- Create a cron job calling:
-  `POST https://<your-api>.onrender.com/api/internal/cron/drain-queues`
-- Header: `Authorization: Bearer <CRON_SECRET>`
-- Interval: every 5 minutes (BRD §14.2).
+### Post-deploy step (Link the Frontend)
+Once the `leados-api` service finishes building, copy its live URL (e.g., `https://leados-api-xxxx.onrender.com`). 
+Go to the `leados-web` service on Render, add an environment variable `VITE_API_URL` with that URL, and manually redeploy `leados-web` so the frontend can talk to the backend.
 
 ---
 
