@@ -90,7 +90,7 @@ router.post(
 
     // Compute scores (rule-based = fast, deterministic) then persist in one
     // transaction to minimize DB round-trips on the free connection pool.
-    const updates = [];
+    const updates: any[] = [];
     for (const lead of leads) {
       const result = await scoreLead(lead);
       updates.push(prisma.lead.update({ where: { id: lead.id }, data: { score: result.score } }));
