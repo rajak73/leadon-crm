@@ -1,0 +1,19 @@
+{
+  "name": "LeadOS — AI CRM & Social Lead Automation",
+  "short_name": "LeadOS",
+  "description": "Multi-tenant CRM that captures leads from social, web, and sales and turns conversations into revenue.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b1120",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

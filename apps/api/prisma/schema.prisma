@@ -1,0 +1,376 @@
+// LeadOS Prisma schema — core data model (BRD §17).
+//
+// Provider is "sqlite" for zero-config local dev. To use Neon/PostgreSQL
+// (BRD §15.1) change provider to "postgresql" and set DATABASE_URL to the
+// Neon connection string. Enum columns are modeled as String for SQLite
+// portability; values are constrained in the shared package (@leados/shared).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & Organizations (multi-tenant core — BRD §10.3, §17)
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  isSuperAdmin Boolean  @default(false) // BRD §17: User.isSuperAdmin = true
+  googleId     String?  @unique         // set when the account is linked to Google SSO
+  avatarUrl    String?
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?  // base32 TOTP secret (encrypt at rest in prod)
+  twoFactorBackupCodes String? // JSON array of bcrypt-hashed backup codes
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships    OrganizationMember[]
+  assignedLeads  Lead[]               @relation("LeadAssignee")
+  assignedTasks  Task[]               @relation("TaskAssignee")
+  ownedDeals     Deal[]               @relation("DealOwner")
+  activities     Activity[]           @relation("ActivityActor")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  status    String   @default("ACTIVE") // ACTIVE | SUSPENDED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members        OrganizationMember[]
+  leads          Lead[]
+  contacts       Contact[]
+  deals          Deal[]
+  pipelines      Pipeline[]
+  tasks          Task[]
+  conversations  Conversation[]
+  messages       Message[]
+  activities     Activity[]
+  workflows      Workflow[]
+  webhookEvents  WebhookEvent[]
+  integrations   IntegrationAccount[]
+  subscription   Subscription?
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  savedViews     SavedView[]
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String   @default("SALES_AGENT") // BRD §9 roles
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// CRM entities (added incrementally per module; defined now for FK integrity)
+// ---------------------------------------------------------------------------
+
+model Lead {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  source         String   @default("MANUAL") // BRD §10.6
+  status         String   @default("NEW")     // BRD §10.6
+  score          Int      @default(0)
+  assignedUserId String?
+  notes          String?
+  customFields   String?  // JSON string (SQLite). captureState lives here (BRD §12)
+  lastActivityAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedUser User?        @relation("LeadAssignee", fields: [assignedUserId], references: [id])
+  deals        Deal[]
+  tasks        Task[]
+  conversations Conversation[]
+  activities   Activity[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, lastActivityAt])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  company        String?
+  source         String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals        Deal[]
+  tasks        Task[]
+  activities   Activity[]
+
+  @@index([organizationId])
+}
+
+model Pipeline {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   @default("Sales Pipeline")
+  isDefault      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages       PipelineStage[]
+  deals        Deal[]
+
+  @@index([organizationId])
+}
+
+model PipelineStage {
+  id          String @id @default(cuid())
+  pipelineId  String
+  key         String
+  name        String
+  order       Int
+  probability Int    @default(0)
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  organizationId    String
+  title             String
+  value             Float     @default(0)
+  probability       Int       @default(0)
+  status            String    @default("OPEN") // OPEN | WON | LOST
+  expectedCloseDate DateTime?
+  ownerId           String?
+  pipelineId        String?
+  stageId           String?
+  leadId            String?
+  contactId         String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?          @relation("DealOwner", fields: [ownerId], references: [id])
+  pipeline     Pipeline?      @relation(fields: [pipelineId], references: [id])
+  stage        PipelineStage? @relation(fields: [stageId], references: [id])
+  lead         Lead?          @relation(fields: [leadId], references: [id])
+  contact      Contact?       @relation(fields: [contactId], references: [id])
+  tasks        Task[]
+
+  @@index([organizationId])
+  @@index([organizationId, stageId])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  assignedUserId String?
+  dueDate        DateTime?
+  status         String    @default("OPEN")   // BRD §10.9
+  priority       String    @default("MEDIUM") // BRD §10.9
+  leadId         String?
+  dealId         String?
+  contactId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedUser User?        @relation("TaskAssignee", fields: [assignedUserId], references: [id])
+  lead         Lead?        @relation(fields: [leadId], references: [id])
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  channel        String   @default("INTERNAL") // BRD §10.10
+  externalId     String?
+  customerName   String?
+  leadId         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id])
+  messages     Message[]
+
+  @@index([organizationId])
+  @@index([organizationId, updatedAt])
+  @@index([organizationId, channel, externalId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  organizationId String
+  conversationId String
+  direction      String   // INBOUND | OUTBOUND
+  body           String
+  status         String   @default("RECEIVED") // RECEIVED | QUEUED | SENT | FAILED
+  isSimulation   Boolean  @default(false)       // BRD §11.3
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([organizationId])
+}
+
+model Activity {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  type           String
+  message        String
+  leadId         String?
+  contactId      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation("ActivityActor", fields: [actorUserId], references: [id])
+  lead         Lead?        @relation(fields: [leadId], references: [id])
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+
+  @@index([organizationId])
+  @@index([organizationId, createdAt])
+}
+
+model Workflow {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  isActive       Boolean  @default(false)
+  definition     String?  // JSON string
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model WebhookEvent {
+  id             String   @id @default(cuid())
+  organizationId String?
+  channel        String
+  externalId     String?  // for idempotency (BRD §19.4)
+  payload        String   // JSON string
+  status         String   @default("PENDING") // PENDING | PROCESSED | FAILED
+  isSimulation   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  processedAt    DateTime?
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([status])
+  @@index([status, createdAt])
+  @@index([channel, externalId])
+}
+
+model IntegrationAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String   // INSTAGRAM | WHATSAPP | FACEBOOK
+  externalId     String?  // business phone-number id / page id / ig account id
+  displayName    String?
+  accessToken    String?  // per-account page/access token (encrypt at rest in prod)
+  isConnected    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([provider, externalId])
+}
+
+model Subscription {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  plan           String   @default("TRIAL") // TRIAL | STARTER | PRO | ENTERPRISE
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?  // null = org-wide; else targeted to a user
+  type           String   // LEAD_CAPTURED | TASK_DUE | WORKFLOW_RUN | SYSTEM
+  title          String
+  body           String?
+  link           String?  // optional in-app link (e.g. /app/leads)
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isRead])
+  @@index([organizationId, createdAt])
+}
+
+model SavedView {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String   // views are personal to the creating user
+  name           String
+  resource       String   @default("LEADS") // which list this view applies to
+  filters        String   // JSON string of filter params (status, source, q, ...)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, resource])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorUserId    String?  // who performed the action (null = system/public)
+  actorEmail     String?  // denormalized for readability if the user is removed
+  action         String   // e.g. LEAD_CREATED, DEAL_DELETED, MEMBER_ROLE_CHANGED
+  entityType     String?  // Lead | Deal | Task | Member | Organization | ...
+  entityId       String?
+  metadata       String?  // JSON string (safe, non-secret details)
+  ip             String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+}

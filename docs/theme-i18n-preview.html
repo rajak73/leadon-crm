@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LeadOS — Dark Mode & i18n Preview</title>
+<style>
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background:#eef0f4; padding:24px; }
+  h2 { text-align:center; color:#334155; }
+  .row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+  .frame { width:340px; border-radius:16px; overflow:hidden; box-shadow:0 10px 30px rgba(16,24,40,.14); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; font-size:13px; }
+  .content { padding:16px; }
+  .h1 { font-size:18px; font-weight:800; margin:0 0 2px; }
+  .sub { font-size:12px; margin:0 0 14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat { border-radius:10px; padding:12px; }
+  .label { font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .value { font-size:20px; font-weight:800; margin-top:4px; }
+  .pill { font-size:11px; padding:3px 8px; border-radius:999px; }
+  .cap { text-align:center; font-size:12px; color:#64748b; margin-top:8px; }
+
+  /* light */
+  .light { background:#f6f7f9; color:#0f172a; }
+  .light .topbar { background:#fff; border-bottom:1px solid #e6e8eb; }
+  .light .stat { background:#fff; border:1px solid #e6e8eb; }
+  .light .label { color:#64748b; }
+  .light .sub { color:#64748b; }
+  .light .pill { background:#eef2ff; color:#4338ca; }
+
+  /* dark */
+  .dark { background:#0b1120; color:#e5e9f0; }
+  .dark .topbar { background:#131a2a; border-bottom:1px solid #263145; }
+  .dark .stat { background:#131a2a; border:1px solid #263145; }
+  .dark .label { color:#94a3b8; }
+  .dark .sub { color:#94a3b8; }
+  .dark .pill { background:#1e293b; color:#818cf8; }
+  .brand { font-weight:800; color:#6366f1; }
+</style>
+</head>
+<body>
+  <h2>LeadOS — Dark Mode &amp; Multi-language (preview)</h2>
+  <div class="row">
+
+    <!-- Light + English -->
+    <div class="frame light">
+      <div class="topbar"><span class="brand">LeadOS</span><span>🌙 &nbsp; English ▾</span></div>
+      <div class="content">
+        <div class="h1">Dashboard</div>
+        <div class="sub">Your organization at a glance.</div>
+        <div class="grid">
+          <div class="stat"><div class="label">Leads</div><div class="value">128</div></div>
+          <div class="stat"><div class="label">Deals</div><div class="value">37</div></div>
+          <div class="stat"><div class="label">Open Tasks</div><div class="value">9</div></div>
+          <div class="stat"><div class="label">Contacts</div><div class="value">64</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark + Hindi -->
+    <div class="frame dark">
+      <div class="topbar"><span class="brand">LeadOS</span><span>☀️ &nbsp; हिन्दी ▾</span></div>
+      <div class="content">
+        <div class="h1">डैशबोर्ड</div>
+        <div class="sub">आपका संगठन एक नज़र में।</div>
+        <div class="grid">
+          <div class="stat"><div class="label">लीड्स</div><div class="value">128</div></div>
+          <div class="stat"><div class="label">डील्स</div><div class="value">37</div></div>
+          <div class="stat"><div class="label">खुले कार्य</div><div class="value">9</div></div>
+          <div class="stat"><div class="label">संपर्क</div><div class="value">64</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark + Spanish -->
+    <div class="frame dark">
+      <div class="topbar"><span class="brand">LeadOS</span><span>☀️ &nbsp; Español ▾</span></div>
+      <div class="content">
+        <div class="h1">Panel</div>
+        <div class="sub">Tu organización de un vistazo.</div>
+        <div class="grid">
+          <div class="stat"><div class="label">Prospectos</div><div class="value">128</div></div>
+          <div class="stat"><div class="label">Negocios</div><div class="value">37</div></div>
+          <div class="stat"><div class="label">Tareas abiertas</div><div class="value">9</div></div>
+          <div class="stat"><div class="label">Contactos</div><div class="value">64</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <p class="cap">Static mockup illustrating the real feature. Toggle theme (🌙/☀️) and language in the app topbar — preferences persist in localStorage.</p>
+</body>
+</html>

@@ -1,0 +1,513 @@
+openapi: 3.0.3
+info:
+  title: LeadOS API
+  version: 0.1.0
+  description: >
+    AI-Powered CRM & Social Lead Automation Platform. Multi-tenant. Most routes
+    require a Bearer JWT and an `X-Org-Id` header identifying the organization
+    (tenant isolation, BRD §20). Import this file directly into Postman
+    (File → Import) or any OpenAPI client.
+servers:
+  - url: http://localhost:4000
+    description: Local
+  - url: https://leados-api.onrender.com
+    description: Production (example)
+
+tags:
+  - name: Auth
+  - name: 2FA
+  - name: SSO
+  - name: Organizations
+  - name: Dashboard
+  - name: Reports
+  - name: Leads
+  - name: Contacts
+  - name: Deals
+  - name: Tasks
+  - name: Inbox
+  - name: AI
+  - name: Workflows
+  - name: Billing
+  - name: Integrations
+  - name: Calendar
+  - name: Search
+  - name: Notifications
+  - name: Audit
+  - name: Forms
+  - name: Simulation
+  - name: Admin
+  - name: Webhooks
+  - name: Cron
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgId:
+      name: X-Org-Id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Organization id (tenant scope, BRD §20)
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        details: {}
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+        organizations:
+          type: array
+          items: { $ref: '#/components/schemas/OrgMembership' }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        isSuperAdmin: { type: boolean }
+    OrgMembership:
+      type: object
+      properties:
+        organizationId: { type: string }
+        organizationName: { type: string }
+        organizationSlug: { type: string }
+        role: { type: string, enum: [OWNER, ADMIN, SALES_MANAGER, SALES_AGENT, SUPPORT_AGENT] }
+    Lead:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        source: { type: string, enum: [INSTAGRAM, WHATSAPP, FACEBOOK, WEBSITE, MANUAL, REFERRAL, CAMPAIGN, IMPORT] }
+        status: { type: string, enum: [NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATION, WON, LOST] }
+        score: { type: integer }
+    Deal:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        value: { type: number }
+        stageId: { type: string }
+        status: { type: string }
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [OPEN, IN_PROGRESS, DONE, CANCELLED] }
+        priority: { type: string, enum: [LOW, MEDIUM, HIGH, URGENT] }
+        dueDate: { type: string, format: date-time, nullable: true }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      security: []
+      responses:
+        '200': { description: OK }
+
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create user + workspace (BRD §10.2)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName, email, password, workspaceName]
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+                password: { type: string, example: 'LeadOS@123' }
+                workspaceName: { type: string }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '400': { description: Weak password / validation }
+        '409': { description: Email exists }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '401': { description: Invalid credentials }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user + memberships
+      responses:
+        '200': { description: OK }
+
+  /api/v1/2fa/setup:
+    post: { tags: [2FA], summary: Start 2FA enrollment (returns QR + secret), responses: { '200': { description: OK } } }
+  /api/v1/2fa/enable:
+    post: { tags: [2FA], summary: Verify a code and enable 2FA (returns backup codes), responses: { '200': { description: OK } } }
+  /api/v1/2fa/disable:
+    post: { tags: [2FA], summary: Disable 2FA (requires password), responses: { '200': { description: OK } } }
+  /api/v1/2fa/status:
+    get: { tags: [2FA], summary: Whether 2FA is enabled, responses: { '200': { description: OK } } }
+  /api/v1/2fa/login-verify:
+    post:
+      tags: [2FA]
+      summary: Complete login with a TOTP code or backup code
+      security: []
+      requestBody: { content: { application/json: { schema: { type: object, properties: { challenge: {type: string}, token: {type: string}, backupCode: {type: string} } } } } }
+      responses: { '200': { description: Session token }, '401': { description: Invalid code } }
+
+  /api/v1/sso/status:
+    get: { tags: [SSO], summary: SSO availability (google boolean), security: [], responses: { '200': { description: OK } } }
+  /api/v1/sso/google:
+    get: { tags: [SSO], summary: Start Google OAuth login (redirect), security: [], responses: { '302': { description: Redirect to Google }, '400': { description: SSO not configured } } }
+  /api/v1/sso/google/callback:
+    get: { tags: [SSO], summary: Google OAuth callback (redirects to web app with token), security: [], responses: { '302': { description: Redirect } } }
+
+  /api/v1/organizations:
+    get:
+      tags: [Organizations]
+      summary: List my organizations
+      responses: { '200': { description: OK } }
+
+  /api/v1/organizations/current:
+    get:
+      tags: [Organizations]
+      summary: Current org details
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: OK }, '403': { description: Not a member } }
+
+  /api/v1/organizations/members:
+    get:
+      tags: [Organizations]
+      summary: List members
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Organizations]
+      summary: Add member (owner/admin)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { firstName: {type: string}, lastName: {type: string}, email: {type: string}, password: {type: string}, role: {type: string} } } } }
+      responses: { '201': { description: Created }, '402': { description: Plan limit } }
+
+  /api/v1/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Org dashboard counts (BRD §10.5)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: OK } }
+
+  /api/v1/reports/overview:
+    get:
+      tags: [Reports]
+      summary: Analytics KPIs + charts + trends over a date range
+      parameters:
+        - { $ref: '#/components/parameters/OrgId' }
+        - { name: days, in: query, schema: { type: integer }, description: '7 | 30 | 90 | 365' }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses: { '200': { description: OK } }
+  /api/v1/reports/export.csv:
+    get:
+      tags: [Reports]
+      summary: Export report metrics as CSV
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: days, in: query, schema: { type: integer } }]
+      responses: { '200': { description: CSV } }
+  /api/v1/reports/leaderboard:
+    get:
+      tags: [Reports]
+      summary: Per-agent performance leaderboard (assigned/won/conversion/pipeline)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: OK } }
+
+  /api/v1/leads:
+    get:
+      tags: [Leads]
+      summary: List leads (paginated, filterable)
+      parameters:
+        - { $ref: '#/components/parameters/OrgId' }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: pageSize, in: query, schema: { type: integer } }
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Leads]
+      summary: Create lead
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Lead' } } } }
+      responses: { '201': { description: Created }, '402': { description: Plan limit } }
+
+  /api/v1/leads/export.csv:
+    get:
+      tags: [Leads]
+      summary: Export leads as CSV
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: CSV, content: { text/csv: {} } } }
+
+  /api/v1/leads/import:
+    post:
+      tags: [Leads]
+      summary: Bulk import leads
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { rows: { type: array, items: { $ref: '#/components/schemas/Lead' } } } } } } }
+      responses: { '201': { description: Imported } }
+
+  /api/v1/leads/bulk:
+    post:
+      tags: [Leads]
+      summary: Bulk action on many leads (SET_STATUS | ASSIGN | DELETE)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { ids: { type: array, items: { type: string } }, action: { type: string }, status: { type: string }, assignedUserId: { type: string } } } } } }
+      responses: { '200': { description: '{ affected }' } }
+
+  /api/v1/contacts/export.csv:
+    get: { tags: [Contacts], summary: Export contacts as CSV, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: CSV } } }
+  /api/v1/contacts/import:
+    post: { tags: [Contacts], summary: Bulk import contacts, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Imported } } }
+  /api/v1/contacts/bulk:
+    post: { tags: [Contacts], summary: Bulk delete contacts, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: '{ affected }' } } }
+  /api/v1/deals/export.csv:
+    get: { tags: [Deals], summary: Export deals as CSV, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: CSV } } }
+  /api/v1/deals/bulk:
+    post: { tags: [Deals], summary: Bulk set-stage or delete deals, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: '{ affected }' } } }
+  /api/v1/audit/export.csv:
+    get: { tags: [Audit], summary: Export audit log as CSV (owner/admin), parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: CSV } } }
+
+  /api/v1/search:
+    get:
+      tags: [Search]
+      summary: Global search across leads, contacts, and deals (⌘K)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: q, in: query, required: true, schema: { type: string } }]
+      responses: { '200': { description: '{ leads, contacts, deals }' } }
+
+  /api/v1/saved-views:
+    get: { tags: [Leads], summary: List saved views, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: resource, in: query, schema: { type: string } }], responses: { '200': { description: OK } } }
+    post: { tags: [Leads], summary: Create a saved view, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Created } } }
+
+  /api/v1/leads/{id}/notes:
+    post:
+      tags: [Leads]
+      summary: Add a note to a lead's activity timeline
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { note: { type: string } } } } } }
+      responses: { '201': { description: Logged } }
+
+  /api/v1/leads/{id}:
+    get: { tags: [Leads], summary: Get lead, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK }, '404': { description: Not found } } }
+    patch: { tags: [Leads], summary: Update lead, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+    delete: { tags: [Leads], summary: Delete lead, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '204': { description: Deleted } } }
+
+  /api/v1/contacts:
+    get: { tags: [Contacts], summary: List contacts, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+    post: { tags: [Contacts], summary: Create contact, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Created } } }
+
+  /api/v1/contacts/{id}/notes:
+    post:
+      tags: [Contacts]
+      summary: Add a note to a contact's timeline
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { note: { type: string } } } } } }
+      responses: { '201': { description: Logged } }
+
+  /api/v1/contacts/{id}/customer360:
+    get:
+      tags: [Contacts]
+      summary: Customer 360 profile (BRD §10.7)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /api/v1/deals/pipeline:
+    get:
+      tags: [Deals]
+      summary: Kanban pipeline board (BRD §10.8)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      responses: { '200': { description: OK } }
+
+  /api/v1/deals:
+    get: { tags: [Deals], summary: List deals, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+    post: { tags: [Deals], summary: Create deal, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Created } } }
+
+  /api/v1/deals/{id}:
+    get: { tags: [Deals], summary: Single deal detail (stages, related, activity), parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK }, '404': { description: Not found } } }
+    patch: { tags: [Deals], summary: Update a deal, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+    delete: { tags: [Deals], summary: Delete a deal, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '204': { description: Deleted } } }
+
+  /api/v1/deals/{id}/stage:
+    patch:
+      tags: [Deals]
+      summary: Move deal to another stage
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK } }
+
+  /api/v1/tasks:
+    get: { tags: [Tasks], summary: List tasks, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+    post: { tags: [Tasks], summary: Create task (syncs to calendar if due date), parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Created } } }
+
+  /api/v1/conversations:
+    get: { tags: [Inbox], summary: List conversations, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+
+  /api/v1/conversations/{id}:
+    get: { tags: [Inbox], summary: Conversation thread, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+
+  /api/v1/conversations/{id}/reply:
+    post:
+      tags: [Inbox]
+      summary: Send reply (simulation SENT; real w/o creds FAILED — BRD §11.3)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { body: {type: string}, isSimulation: {type: boolean} } } } } }
+      responses: { '201': { description: Sent (simulation) }, '502': { description: Real send failed safely } }
+
+  /api/v1/ai/status:
+    get: { tags: [AI], summary: AI mode (ai|rules), parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/ai/score-lead/{id}:
+    post: { tags: [AI], summary: Score a lead, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: id, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/ai/score-all:
+    post: { tags: [AI], summary: Batch score leads, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/ai/reply-suggestions/{conversationId}:
+    get: { tags: [AI], summary: Reply suggestions, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: conversationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/ai/summarize/{conversationId}:
+    get: { tags: [AI], summary: Conversation summary, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: conversationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/ai/sentiment/{conversationId}:
+    get: { tags: [AI], summary: Sentiment, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: conversationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/ai/deal-probability/{dealId}:
+    get: { tags: [AI], summary: Deal close probability, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: dealId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/ai/next-best-action/{leadId}:
+    get: { tags: [AI], summary: Next best action, parameters: [{ $ref: '#/components/parameters/OrgId' }, { name: leadId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+
+  /api/v1/workflows:
+    get: { tags: [Workflows], summary: List workflows, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+    post: { tags: [Workflows], summary: Create workflow, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Created } } }
+
+  /api/v1/billing/plans:
+    get: { tags: [Billing], summary: Plan catalog, security: [], responses: { '200': { description: OK } } }
+  /api/v1/billing/subscription:
+    get: { tags: [Billing], summary: Current subscription + usage, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/billing/change-plan:
+    post: { tags: [Billing], summary: Change plan (owner/admin), parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+
+  /api/v1/integrations:
+    get: { tags: [Integrations], summary: List connected accounts, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/integrations/connect:
+    post: { tags: [Integrations], summary: Connect a Meta account, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '201': { description: Connected } } }
+
+  /api/v1/calendar/status:
+    get: { tags: [Calendar], summary: Calendar connection status, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/calendar/connect:
+    get: { tags: [Calendar], summary: Begin Google OAuth (owner/admin), parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+
+  /api/v1/notifications:
+    get: { tags: [Notifications], summary: List notifications, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/notifications/unread-count:
+    get: { tags: [Notifications], summary: Unread count, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+  /api/v1/notifications/read-all:
+    post: { tags: [Notifications], summary: Mark all read, parameters: [{ $ref: '#/components/parameters/OrgId' }], responses: { '200': { description: OK } } }
+
+  /api/v1/audit:
+    get:
+      tags: [Audit]
+      summary: Audit trail (owner/admin only, BRD §8.2)
+      parameters:
+        - { $ref: '#/components/parameters/OrgId' }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
+      responses: { '200': { description: OK }, '403': { description: Requires owner/admin } }
+
+  /api/v1/forms/{orgSlug}/submit:
+    post:
+      tags: [Forms]
+      summary: Public web-form lead capture (BRD §15.2)
+      security: []
+      parameters: [{ name: orgSlug, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: {type: string}, email: {type: string}, phone: {type: string}, message: {type: string} } } } } }
+      responses: { '201': { description: Captured } }
+
+  /api/v1/simulation/webhook:
+    post:
+      tags: [Simulation]
+      summary: Inject a simulated inbound social message (BRD §11.1)
+      parameters: [{ $ref: '#/components/parameters/OrgId' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { channel: {type: string}, senderId: {type: string}, text: {type: string}, drainNow: {type: boolean} } } } } }
+      responses: { '201': { description: Queued/processed } }
+
+  /api/v1/admin/organizations:
+    get:
+      tags: [Admin]
+      summary: All orgs with counts (Super Admin only, BRD §10.4)
+      responses: { '200': { description: OK }, '403': { description: Not super admin } }
+  /api/v1/admin/metrics:
+    get: { tags: [Admin], summary: Platform metrics (Super Admin), responses: { '200': { description: OK } } }
+  /api/v1/admin/organizations/{id}/members:
+    get: { tags: [Admin], summary: Members of an org (Super Admin, safe fields), responses: { '200': { description: OK } } }
+  /api/v1/admin/users:
+    get: { tags: [Admin], summary: Platform user directory (Super Admin), responses: { '200': { description: OK } } }
+  /api/v1/admin/users/{id}/super-admin:
+    patch: { tags: [Admin], summary: Grant/revoke Super Admin (guards self-revoke), responses: { '200': { description: OK }, '400': { description: Cannot revoke self } } }
+  /api/v1/admin/search:
+    get: { tags: [Admin], summary: Platform-wide search across orgs & users (Super Admin), parameters: [{ name: q, in: query, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /api/v1/admin/activity:
+    get: { tags: [Admin], summary: Recent platform-wide audit activity (Super Admin), responses: { '200': { description: OK } } }
+  /api/v1/admin/organizations/{id}/activity:
+    get: { tags: [Admin], summary: Recent audit activity for one org (Super Admin drill-down), responses: { '200': { description: OK } } }
+
+  /api/v1/webhooks/meta:
+    get:
+      tags: [Webhooks]
+      summary: Meta verification handshake (BRD §16)
+      security: []
+      parameters:
+        - { name: hub.mode, in: query, schema: { type: string } }
+        - { name: hub.verify_token, in: query, schema: { type: string } }
+        - { name: hub.challenge, in: query, schema: { type: string } }
+      responses: { '200': { description: Echoes challenge }, '403': { description: Bad token } }
+    post:
+      tags: [Webhooks]
+      summary: Meta event delivery (HMAC-signed, BRD §16)
+      security: []
+      parameters: [{ name: X-Hub-Signature-256, in: header, schema: { type: string } }]
+      responses: { '200': { description: Accepted }, '401': { description: Invalid signature } }
+
+  /api/v1/webhooks/meta/data-deletion:
+    post:
+      tags: [Webhooks]
+      summary: Meta data-deletion callback (App Review, BRD §16)
+      security: []
+      responses: { '200': { description: url + confirmation_code } }
+
+  /api/internal/cron/drain-queues:
+    post:
+      tags: [Cron]
+      summary: Drain queued webhook events (Bearer CRON_SECRET, BRD §14)
+      security: []
+      parameters: [{ name: Authorization, in: header, schema: { type: string }, description: 'Bearer <CRON_SECRET>' }]
+      responses: { '200': { description: Drained }, '401': { description: Bad secret } }

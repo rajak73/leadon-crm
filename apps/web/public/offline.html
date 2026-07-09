@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LeadOS — Offline</title>
+  <style>
+    body { margin:0; height:100vh; display:grid; place-items:center; font-family: system-ui, sans-serif;
+      background:#0b1120; color:#e5e9f0; text-align:center; padding:24px; }
+    .box { max-width:380px; }
+    .logo { font-weight:800; font-size:26px; color:#818cf8; margin-bottom:12px; }
+    p { color:#94a3b8; }
+    button { margin-top:16px; padding:10px 18px; border:none; border-radius:10px; background:#6366f1; color:#fff; font-weight:600; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">LeadOS</div>
+    <h2>You're offline</h2>
+    <p>The app shell is available offline, but this action needs a connection. Reconnect and try again.</p>
+    <button onclick="location.reload()">Retry</button>
+  </div>
+</body>
+</html>

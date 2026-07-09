@@ -1,0 +1,23 @@
+{
+  "name": "leados",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LeadOS — AI-Powered CRM & Social Lead Automation Platform (monorepo)",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @leados/api prisma:generate",
+    "db:migrate": "pnpm --filter @leados/api prisma:migrate",
+    "db:push": "pnpm --filter @leados/api prisma:push",
+    "db:seed": "pnpm --filter @leados/api demo:seed",
+    "api": "pnpm --filter @leados/api dev",
+    "web": "pnpm --filter @leados/web dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

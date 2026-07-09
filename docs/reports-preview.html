@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LeadOS — Reports Preview</title>
+<style>
+ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f6f7f9;color:#0f172a;padding:24px}
+ h2{text-align:center;color:#334155}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;margin:0 auto}
+ .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:900px;margin:0 auto 16px}
+ .card{background:#fff;border:1px solid #e6e8eb;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(16,24,40,.1)}
+ .h2{font-size:15px;font-weight:700;margin:0 0 12px}
+ .label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}
+ .value{font-size:24px;font-weight:800;margin-top:4px}
+ .legend{font-size:13px;margin:4px 0}
+ .sw{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:middle}
+ .cap{text-align:center;color:#64748b;font-size:12px;margin-top:14px}
+</style></head>
+<body>
+<h2>LeadOS — Reports & Analytics (preview)</h2>
+<div class="grid4">
+  <div class="card"><div class="label">Total Leads</div><div class="value">3</div></div>
+  <div class="card"><div class="label">Conversion Rate</div><div class="value">0%</div></div>
+  <div class="card"><div class="label">Won Value</div><div class="value">₹0</div></div>
+  <div class="card"><div class="label">Task Completion</div><div class="value">33%</div></div>
+</div>
+<div class="grid">
+  <div class="card">
+    <div class="h2">Leads by Status</div>
+    <svg viewBox="0 0 100 100" width="100%" height="200" preserveAspectRatio="none" style="overflow:visible">
+      <rect x="4" y="40" width="9" height="46" rx="1" fill="#4f46e5"/><text x="8.5" y="37" text-anchor="middle" font-size="3.2" fill="#64748b">1</text><text x="8.5" y="92" text-anchor="middle" font-size="2.8" fill="#64748b">NEW</text>
+      <rect x="18" y="40" width="9" height="46" rx="1" fill="#0ea5e9"/><text x="22.5" y="37" text-anchor="middle" font-size="3.2" fill="#64748b">1</text><text x="22.5" y="92" text-anchor="middle" font-size="2.8" fill="#64748b">CONTACT…</text>
+      <rect x="32" y="40" width="9" height="46" rx="1" fill="#f59e0b"/><text x="36.5" y="37" text-anchor="middle" font-size="3.2" fill="#64748b">1</text><text x="36.5" y="92" text-anchor="middle" font-size="2.8" fill="#64748b">QUALIFI…</text>
+      <rect x="46" y="82" width="9" height="4" rx="1" fill="#a855f7"/><text x="50.5" y="79" text-anchor="middle" font-size="3.2" fill="#64748b">0</text>
+      <rect x="60" y="82" width="9" height="4" rx="1" fill="#ec4899"/><text x="64.5" y="79" text-anchor="middle" font-size="3.2" fill="#64748b">0</text>
+    </svg>
+  </div>
+  <div class="card">
+    <div class="h2">Leads by Source</div>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <svg viewBox="0 0 160 160" width="160" height="160">
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#e6e8eb" stroke-width="26"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#4f46e5" stroke-width="26" stroke-dasharray="125 252" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#0ea5e9" stroke-width="26" stroke-dasharray="125 252" stroke-dashoffset="-125" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#f59e0b" stroke-width="26" stroke-dasharray="126 251" stroke-dashoffset="-250" transform="rotate(-90 80 80)"/>
+        <text x="80" y="80" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="700">3</text>
+      </svg>
+      <div>
+        <div class="legend"><span class="sw" style="background:#4f46e5"></span>INSTAGRAM <span style="color:#64748b">1 (33%)</span></div>
+        <div class="legend"><span class="sw" style="background:#0ea5e9"></span>WHATSAPP <span style="color:#64748b">1 (33%)</span></div>
+        <div class="legend"><span class="sw" style="background:#f59e0b"></span>WEBSITE <span style="color:#64748b">1 (33%)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="cap">Live charts are dependency-free inline SVG and adapt to dark mode. Data shown is from the seeded TechNova Realty demo org.</p>
+</body></html>

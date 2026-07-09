@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# env — NEVER commit secrets (BRD §19.1)
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+build/
+.next/
+out/
+
+# prisma / db
+*.db
+*.db-journal
+test.db
+prisma/*.sqlite
+prisma/migrations/dev.db
+
+# logs
+*.log
+logs/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+
+# playwright / e2e
+apps/web/test-results/
+apps/web/playwright-report/
+apps/api/e2e.db
+apps/api/e2e.db-journal

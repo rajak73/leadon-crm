@@ -1,0 +1,82 @@
+# LeadOS — one-command local stack (BRD production stack, locally).
+# Usage:  docker compose up --build
+#   API → http://localhost:4000   Web → http://localhost:5173
+#
+# Uses Postgres + Redis so it mirrors the Neon + Upstash production stack.
+# The free/simple path (SQLite, no Redis) still works without Docker.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: leados
+      POSTGRES_PASSWORD: leados
+      POSTGRES_DB: leados
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leados"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # NOTE: for Postgres, set the Prisma provider to "postgresql" in
+      # apps/api/prisma/schema.prisma before building (see README).
+      DATABASE_URL: postgresql://leados:leados@db:5432/leados?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me-in-prod
+      CRON_SECRET: change-me-cron
+      WEB_ORIGIN: http://localhost:5173
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: sh -c "node dist/worker.js"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://leados:leados@db:5432/leados?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me-in-prod
+    depends_on:
+      - api
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  db_data:
