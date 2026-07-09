@@ -275,11 +275,15 @@ Import it into **Postman** (File → Import → select `openapi.yaml`) or view i
 OpenAPI/Swagger UI. Auth is Bearer JWT; most routes need the `X-Org-Id` header.
 
 ### Rich demo data + ready Super Admin
-`ALLOW_DEMO_SEED=true pnpm db:seed` creates 3 orgs, each with leads, deals,
+`ALLOW_DEMO_SEED=true pnpm --filter @leados/api run demo:seed` creates 3 orgs, each with leads, deals,
 tasks (incl. overdue/done), **2 inbox conversations with a full 4-message
 capture journey**, activities, and an active workflow. It also **promotes the
-first owner to Super Admin** so `/admin` works immediately:
-- Super Admin / demo login: `meera@demo.test` / `LeadOS@123`
+first owner to Super Admin** so `/admin` works immediately.
+
+**Demo Logins (Password for all is `LeadOS@123`):**
+- **TechNova Realty (Super Admin + Org Owner):** `meera@demo.test`
+- **GrowthBridge Agency (Org Owner):** `karan@demo.test`
+- **CureCare Clinic (Org Owner):** `anita@demo.test`
 
 ### Live demo walkthrough (for presentations)
 With the API running, drive the whole product end-to-end with narrated output:
