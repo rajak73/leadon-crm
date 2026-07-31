@@ -17,7 +17,17 @@ interface Lead {
   deals: { id: string; title: string; value: number; stage?: { name: string } | null }[];
   tasks: { id: string; title: string; status: string; dueDate?: string | null }[];
   activities: { id: string; type: string; message: string; createdAt: string }[];
-  conversations: { id: string; channel: string; type?: string; externalId?: string | null; messages: { id: string; direction: string; body: string }[] }[];
+  conversations: { id: string; channel: string; type?: string; externalId?: string | null; customerName?: string | null; messages: { id: string; direction: string; body: string }[] }[];
+}
+
+/** The Instagram handle for this lead, if any conversation captured one —
+ * DM webhook events don't include a username directly, so this is fetched
+ * separately at first contact and stored on the conversation. */
+function instagramHandle(lead: Lead): string | null {
+  const conv = lead.conversations.find((c) => c.channel === 'INSTAGRAM' && c.customerName);
+  const name = conv?.customerName;
+  if (!name) return null;
+  return name.startsWith('@') ? name : `@${name}`;
 }
 
 const ACT_ICON: Record<string, typeof PlusCircle> = {
@@ -131,7 +141,12 @@ export default function LeadDetail() {
       <div className="profile-header mt8">
         <Avatar name={lead.name} size={56} />
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{lead.name}</div>
+          <div className="row" style={{ gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{lead.name}</div>
+            {instagramHandle(lead) && instagramHandle(lead) !== `@${lead.name}` && (
+              <span className="text-small">{instagramHandle(lead)}</span>
+            )}
+          </div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <Badge value={lead.status} /> <Badge value={lead.source} />
             <div className="row" style={{ gap: 8 }}>

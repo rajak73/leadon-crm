@@ -48,7 +48,10 @@ router.get(
         where,
         orderBy: { createdAt: 'desc' },
         ...paginate(page, pageSize),
-        include: { assignedUser: { select: { id: true, firstName: true, lastName: true } } },
+        include: {
+          assignedUser: { select: { id: true, firstName: true, lastName: true } },
+          conversations: { where: { channel: 'INSTAGRAM', customerName: { not: null } }, select: { customerName: true }, take: 1 },
+        },
       }),
     ]);
 
@@ -359,6 +362,7 @@ function serializeLead(lead: any) {
     source: lead.source,
     status: lead.status,
     score: lead.score,
+    instagramUsername: lead.conversations?.[0]?.customerName ?? null,
     assignedUserId: lead.assignedUserId,
     assignedUser: lead.assignedUser ?? undefined,
     notes: lead.notes,

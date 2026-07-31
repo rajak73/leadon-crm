@@ -15,6 +15,8 @@ import {
   Search,
   Sun,
   Moon,
+  Kanban,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
@@ -25,14 +27,17 @@ import { NotificationBell } from './NotificationBell';
 import { CommandPalette } from './CommandPalette';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
 
-// Instagram MVP surface only. The rest of the CRM (Leads, Deals, Pipeline,
-// Contacts, Tasks, Workflows, Reports, Billing, Simulator) stays fully
-// implemented and reachable by direct URL — just not linked from the sidebar,
-// per the product decision to ship an Instagram-only front door for now.
+// Instagram MVP surface. The rest of the CRM (Deals, Contacts, Tasks,
+// Workflows, Billing, Simulator) stays fully implemented and reachable by
+// direct URL — just not linked from the sidebar. Pipeline and Reports ARE
+// linked: they're part of the stated core feature set (Lead Pipeline &
+// Conversion Tracker), not general CRM overflow.
 const nav = [
   { to: '/app', key: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/inbox', key: 'nav.inbox', icon: MessageCircle },
   { to: '/app/leads', key: 'nav.leads', icon: Target },
+  { to: '/app/pipeline', key: 'nav.pipeline', icon: Kanban },
+  { to: '/app/reports', key: 'nav.reports', icon: BarChart3 },
   { to: '/app/auto-reply-rules', key: 'nav.autoReplyRules', icon: Bot },
   { to: '/app/follow-ups', key: 'nav.followUps', icon: Clock },
   { to: '/app/integrations', key: 'nav.integrations', icon: Plug },

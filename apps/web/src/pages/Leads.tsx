@@ -19,6 +19,7 @@ interface Lead {
   name: string;
   email?: string | null;
   phone?: string | null;
+  instagramUsername?: string | null;
   source: string;
   status: string;
   score: number;
@@ -249,6 +250,7 @@ export default function Leads() {
                 <tr key={i}>
                   <td style={{ width: 32 }}><Skeleton width={14} height={14} radius={4} /></td>
                   <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width="50%" height={13} /></td>
                   <td><Skeleton width="70%" height={13} /></td>
                   <td><Skeleton width={70} height={20} radius={999} /></td>
                   <td><Skeleton width={70} height={20} radius={999} /></td>
@@ -270,7 +272,7 @@ export default function Leads() {
             <thead>
               <tr>
                 <th style={{ width: 32 }}><input type="checkbox" checked={selected.size === leads.length && leads.length > 0} onChange={toggleAll} /></th>
-                <th>{t('common.name')}</th><th>{t('leads.contact')}</th><th>{t('common.source')}</th><th>{t('common.status')}</th><th>{t('leads.score')}</th><th>{t('common.created')}</th>
+                <th>{t('common.name')}</th><th>Instagram</th><th>{t('leads.contact')}</th><th>{t('common.source')}</th><th>{t('common.status')}</th><th>{t('leads.score')}</th><th>{t('common.created')}</th>
               </tr>
             </thead>
             <tbody>
@@ -278,6 +280,7 @@ export default function Leads() {
                 <tr key={l.id} style={selected.has(l.id) ? { background: 'var(--primary-50)' } : undefined}>
                   <td><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSel(l.id)} /></td>
                   <td><Link to={`/app/leads/${l.id}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{l.name}</Link></td>
+                  <td className="subtle">{l.instagramUsername ? `@${l.instagramUsername.replace(/^@/, '')}` : '—'}</td>
                   <td className="subtle">{l.phone || l.email || '—'}</td>
                   <td><Badge value={l.source} /></td>
                   <td><Badge value={l.status} /></td>

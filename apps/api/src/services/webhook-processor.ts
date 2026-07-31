@@ -19,6 +19,8 @@ import { matchAutoReplyRule } from './autoReply.js';
 import { generateAutoReply } from './ai/index.js';
 import { CAPTURE_STATE } from './capture.js';
 import { parseJson, logActivity } from '../lib/helpers.js';
+import { getInstagramSenderProfile } from './meta/graph.js';
+import { decryptSecret } from '../lib/crypto.js';
 
 export interface InboundPayload {
   organizationId: string;
@@ -172,7 +174,8 @@ async function processInboundComment(payload: InboundPayload, isSimulation: bool
 }
 
 async function processInboundMessage(payload: InboundPayload, isSimulation: boolean): Promise<ProcessResult> {
-  const { organizationId, channel, senderId, senderName, text, messageId } = payload;
+  const { organizationId, channel, senderId, text, messageId } = payload;
+  let senderName = payload.senderName;
 
   // Verify org exists (account → org mapping; simulation supplies it directly).
   const org = await prisma.organization.findUnique({ where: { id: organizationId } });
@@ -182,6 +185,21 @@ async function processInboundMessage(payload: InboundPayload, isSimulation: bool
   let conversation = await prisma.conversation.findFirst({
     where: { organizationId, channel, type: 'DM', externalId: senderId },
   });
+
+  // Instagram DM webhook events (unlike comments) never include the
+  // sender's username — fetch it once, on first contact, so a new lead
+  // shows their real Instagram handle instead of "New Lead".
+  if (!conversation && !senderName && channel === 'INSTAGRAM') {
+    const integration = await prisma.integrationAccount.findFirst({
+      where: { organizationId, provider: 'INSTAGRAM', isConnected: true },
+    });
+    const token = integration?.accessToken ? decryptSecret(integration.accessToken) : null;
+    if (token) {
+      const profile = await getInstagramSenderProfile(senderId, token);
+      senderName = profile.username ? `@${profile.username}` : profile.name;
+    }
+  }
+
   if (!conversation) {
     conversation = await prisma.conversation.create({
       data: {

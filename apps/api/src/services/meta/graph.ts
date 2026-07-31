@@ -123,3 +123,22 @@ export async function sendPrivateReplyToComment(
   const data: any = await res.json();
   return data.message_id ?? 'unknown';
 }
+
+/**
+ * Look up a DM sender's Instagram username. Unlike comments (whose webhook
+ * payload already includes `from.username`), Messenger-style DM events only
+ * give us the sender's opaque IGSID — the username has to be fetched
+ * separately so a new lead isn't stuck showing "New Lead" until they type
+ * their name in chat.
+ */
+export async function getInstagramSenderProfile(
+  senderId: string,
+  pageAccessToken: string
+): Promise<{ name?: string; username?: string }> {
+  if (!pageAccessToken) return {};
+  const url = `${igGraphBase()}/${senderId}?fields=name,username&access_token=${encodeURIComponent(pageAccessToken)}`;
+  const res = await fetch(url);
+  if (!res.ok) return {};
+  const data: any = await res.json().catch(() => ({}));
+  return { name: data.name, username: data.username };
+}
