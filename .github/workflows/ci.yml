@@ -9,14 +9,26 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: leados_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -35,6 +47,8 @@ jobs:
 
       - name: Run API tests
         run: pnpm --filter @leados/api test
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leados_test
 
       - name: Build web
         run: pnpm --filter @leados/web build
