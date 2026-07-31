@@ -84,7 +84,6 @@ export default function Marketing() {
           <div className="brand" style={{ fontSize: 22 }}>LeadOS</div>
           <div className="row">
             <a href="#features" className="subtle">Features</a>
-            <a href="#pricing" className="subtle">Pricing</a>
             <Link to="/login" className="btn outline sm">Log in</Link>
             <Link to="/signup" className="btn primary sm">Get Started</Link>
           </div>
@@ -194,32 +193,6 @@ export default function Marketing() {
             LeadOS runs your Instagram inbox while you run your business — every message answered,
             every lead captured, every night and weekend covered.
           </p>
-        </div>
-      </section>
-
-      <section id="pricing" className="mk-section">
-        <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Simple, transparent pricing</div>
-        <div className="grid grid-3">
-          {[
-            { name: 'Starter', amt: '₹0', note: 'For trying it out', feats: ['1 Instagram account', 'Up to 500 leads', 'Auto-reply rules'] },
-            { name: 'Pro', amt: '₹2,499', note: 'per month', feats: ['Unlimited leads', 'AI-powered replies', 'Follow-up sequences'], hi: true },
-            { name: 'Enterprise', amt: "Let's talk", note: 'custom', feats: ['Multiple team members', 'Priority support', 'Custom onboarding'] },
-          ].map((p) => (
-            <div key={p.name} className="card price-card" style={p.hi ? { borderColor: 'var(--primary)', boxShadow: 'var(--shadow-lg)' } : {}}>
-              {p.hi && <span className="pill">Most popular</span>}
-              <div className="h2">{p.name}</div>
-              <div className="amt">{p.amt}</div>
-              <div className="subtle">{p.note}</div>
-              <div className="mt16" style={{ textAlign: 'left' }}>
-                {p.feats.map((f) => (
-                  <div key={f} className="row mt8" style={{ gap: 8, alignItems: 'center' }}>
-                    <Check size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} /> {f}
-                  </div>
-                ))}
-              </div>
-              <Link to="/signup" className={`btn ${p.hi ? 'primary' : 'outline'} block mt16`}>Choose {p.name}</Link>
-            </div>
-          ))}
         </div>
       </section>
 
