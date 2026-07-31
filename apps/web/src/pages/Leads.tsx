@@ -179,9 +179,14 @@ export default function Leads() {
         <div className="row mt16" style={{ gap: 8, flexWrap: 'wrap' }}>
           <span className="subtle" style={{ fontSize: 13 }}>Saved views:</span>
           {views.map((v) => (
-            <span key={v.id} className="badge gray" style={{ cursor: 'pointer' }} onClick={() => applyView(v)}>
-              {v.name}
-              <span onClick={(e) => { e.stopPropagation(); deleteView(v.id); }} style={{ marginLeft: 6, opacity: 0.6, display: 'inline-flex', verticalAlign: 'middle' }}><X size={12} /></span>
+            <span key={v.id} className="badge gray" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 0 }} onClick={() => applyView(v)}>
+                {v.name}
+              </button>
+              <button type="button" aria-label={`Delete saved view ${v.name}`} onClick={() => deleteView(v.id)}
+                style={{ marginLeft: 6, opacity: 0.6, display: 'inline-flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <X size={12} />
+              </button>
             </span>
           ))}
         </div>

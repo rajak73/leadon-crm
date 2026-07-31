@@ -115,7 +115,14 @@ export default function Inbox() {
             />
           ) : (
             filtered.map((c) => (
-              <div key={c.id} className={`conv-item ${active === c.id ? 'active' : ''}`} onClick={() => openThread(c.id)}>
+              <div
+                key={c.id}
+                className={`conv-item ${active === c.id ? 'active' : ''}`}
+                onClick={() => openThread(c.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThread(c.id); } }}
+              >
                 <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
                   <Avatar name={c.customerName || c.lead?.name || 'Unknown'} />
                   <div style={{ minWidth: 0, flex: 1 }}>
@@ -164,9 +171,16 @@ export default function Inbox() {
               {suggestions.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
                   {suggestions.map((s, i) => (
-                    <div key={i} className="msg out" style={{ cursor: 'pointer', opacity: .95 }} title="Click to use" onClick={() => { setReply(s); setSuggestions([]); }}>
+                    <button
+                      key={i}
+                      type="button"
+                      className="msg out"
+                      style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', opacity: .95, font: 'inherit', border: 'none' }}
+                      title="Click to use"
+                      onClick={() => { setReply(s); setSuggestions([]); }}
+                    >
                       {s}
-                    </div>
+                    </button>
                   ))}
                   <div className="hint">Click a suggestion to use it.</div>
                 </div>

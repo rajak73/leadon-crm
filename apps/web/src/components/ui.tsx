@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, InputHTMLAttributes, ReactNode } from 'react';
 import { X, Eye, EyeOff, Inbox as InboxIcon, type LucideIcon } from 'lucide-react';
 
@@ -156,15 +156,36 @@ export function money(n: number) {
 }
 
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    panelRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div
       onClick={onClose}
       className="overlay-in"
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}
     >
-      <div className="card card-pad modal-in" style={{ width: '100%', maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="card card-pad modal-in"
+        style={{ width: '100%', maxWidth: 480, outline: 'none' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="row between" style={{ marginBottom: 14 }}>
-          <div className="h2" style={{ margin: 0 }}>{title}</div>
+          <div id={titleId} className="h2" style={{ margin: 0 }}>{title}</div>
           <button className="btn sm" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
         {children}

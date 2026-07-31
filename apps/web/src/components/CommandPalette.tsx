@@ -74,11 +74,12 @@ export function CommandPalette() {
     <div onClick={() => setOpen(false)}
       className="overlay-in"
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 60, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '12vh' }}>
-      <div className="card modal-in" style={{ width: '100%', maxWidth: 560, padding: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Command palette" className="card modal-in" style={{ width: '100%', maxWidth: 560, padding: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
         <input
           ref={inputRef}
           className="input"
           style={{ border: 'none', borderRadius: 0, borderBottom: '1px solid var(--border)', fontSize: 16, padding: 16 }}
+          aria-label="Search leads, contacts, deals"
           placeholder="Search leads, contacts, deals…"
           value={q}
           onChange={(e) => setQ(e.target.value)}

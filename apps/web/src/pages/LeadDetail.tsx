@@ -183,7 +183,7 @@ export default function LeadDetail() {
                 <label>Tags</label>
                 <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                   {lead.tags.length === 0 ? <span className="subtle">No tags</span> : lead.tags.map((t) => (
-                    <span key={t} className="badge gray" style={{ cursor: 'pointer' }} title="Remove" onClick={() => removeTag(t)}>{t} ×</span>
+                    <button key={t} type="button" className="badge gray" style={{ cursor: 'pointer', border: 'none' }} aria-label={`Remove tag ${t}`} onClick={() => removeTag(t)}>{t} ×</button>
                   ))}
                 </div>
                 <div className="row" style={{ gap: 6 }}>

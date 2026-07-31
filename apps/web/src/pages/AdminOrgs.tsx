@@ -99,17 +99,17 @@ export default function AdminPanel() {
           <div className="card dropdown-in" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20, padding: 0, maxHeight: 340, overflowY: 'auto' }}>
             {results.organizations.length > 0 && <div className="text-overline" style={{ padding: '8px 12px' }}>Organizations</div>}
             {results.organizations.map((o) => (
-              <div key={o.id} onClick={() => { setResults(null); setQ(''); navigate(`/admin/organizations/${o.id}`); }}
-                className="row" style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8 }}>
+              <button key={o.id} type="button" onClick={() => { setResults(null); setQ(''); navigate(`/admin/organizations/${o.id}`); }}
+                className="row" style={{ width: '100%', textAlign: 'left', padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8, background: 'none', border: 'none', borderRadius: 0, font: 'inherit', color: 'inherit' }}>
                 <Building2 size={14} style={{ color: 'var(--muted)' }} /> <strong>{o.name}</strong> <span className="subtle">· {o.slug}</span> <Badge value={o.status} />
-              </div>
+              </button>
             ))}
             {results.users.length > 0 && <div className="text-overline" style={{ padding: '8px 12px' }}>Users</div>}
             {results.users.map((u) => (
-              <div key={u.id} onClick={() => { setResults(null); setQ(''); setTab('users'); }}
-                className="row" style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8 }}>
+              <button key={u.id} type="button" onClick={() => { setResults(null); setQ(''); setTab('users'); }}
+                className="row" style={{ width: '100%', textAlign: 'left', padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8, background: 'none', border: 'none', borderRadius: 0, font: 'inherit', color: 'inherit' }}>
                 <User size={14} style={{ color: 'var(--muted)' }} /> <strong>{u.name || u.email}</strong> <span className="subtle">· {u.email}</span>{u.isSuperAdmin && <span className="badge gray" style={{ marginLeft: 6 }}>super</span>}
-              </div>
+              </button>
             ))}
           </div>
         )}

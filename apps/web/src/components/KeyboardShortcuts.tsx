@@ -83,9 +83,9 @@ export function KeyboardShortcuts() {
       )}
       {showHelp && (
         <div onClick={() => setShowHelp(false)} className="overlay-in" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 70, display: 'grid', placeItems: 'center', padding: 16 }}>
-          <div className="card card-pad modal-in" style={{ width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="kbd-shortcuts-title" className="card card-pad modal-in" style={{ width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div className="row between" style={{ marginBottom: 12 }}>
-              <div className="h2" style={{ margin: 0 }}>Keyboard Shortcuts</div>
+              <div id="kbd-shortcuts-title" className="h2" style={{ margin: 0 }}>Keyboard Shortcuts</div>
               <button className="btn sm" onClick={() => setShowHelp(false)} aria-label="Close"><X size={16} /></button>
             </div>
             {HELP.map((h) => (

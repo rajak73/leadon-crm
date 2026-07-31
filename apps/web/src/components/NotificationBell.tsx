@@ -99,6 +99,9 @@ export function NotificationBell() {
             <div
               key={n.id}
               onClick={() => openItem(n)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openItem(n); } }}
               style={{
                 padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: n.link ? 'pointer' : 'default',
                 background: n.isRead ? 'transparent' : 'var(--primary-50)',
