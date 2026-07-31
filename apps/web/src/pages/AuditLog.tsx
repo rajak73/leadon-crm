@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Download, ScrollText } from 'lucide-react';
 import { api } from '../lib/api';
-import { Badge, Loading, Empty } from '../components/ui';
+import { Badge, Empty, EmptyState, Skeleton } from '../components/ui';
 
 interface Entry {
   id: string;
@@ -40,16 +41,16 @@ export default function AuditLog() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Audit Log</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Compliance trail of who did what in this organization ({total} events).</p>
+          <div className="text-display">Audit Log</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Compliance trail of who did what in this organization ({total} events).</p>
         </div>
         <button className="btn outline" onClick={() => {
           const base = import.meta.env.VITE_API_URL || '';
           fetch(`${base}/api/v1/audit/export.csv`, { headers: { Authorization: `Bearer ${localStorage.getItem('leados_token')}`, 'X-Org-Id': localStorage.getItem('leados_org') || '' } })
             .then((r) => r.blob()).then((blob) => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'audit-log.csv'; a.click(); URL.revokeObjectURL(url); });
-        }}>⬇ Export CSV</button>
+        }}><Download size={14} /> Export CSV</button>
       </div>
 
       <div className="card card-pad mt16">
@@ -59,7 +60,23 @@ export default function AuditLog() {
           <button className="btn outline" onClick={load}>Filter</button>
         </div>
 
-        {loading ? <Loading /> : entries.length === 0 ? <Empty text="No audit events yet." /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <tr key={i}>
+                  <td><Skeleton width={120} height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width={90} height={20} radius={999} /></td>
+                  <td><Skeleton width="50%" height={13} /></td>
+                  <td><Skeleton width="70%" height={13} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : entries.length === 0 ? (
+          <EmptyState icon={ScrollText} title="No audit events yet" description="Actions taken in this organization will be recorded here for compliance." />
+        ) : (
           <table className="table">
             <thead>
               <tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr>

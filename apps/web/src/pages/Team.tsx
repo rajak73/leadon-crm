@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Users } from 'lucide-react';
 import { api } from '../lib/api';
-import { Badge, Loading, Empty, Modal } from '../components/ui';
+import { Badge, Avatar, EmptyState, Skeleton, Modal } from '../components/ui';
 import { ORG_ROLES, ORG_ROLE_LABELS, type OrgRole } from '@leados/shared';
 import { useAuth } from '../lib/auth';
 import { TwoFactorSettings } from '../components/TwoFactorSettings';
@@ -29,22 +30,41 @@ export default function Team() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Team</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Manage members and roles for this workspace.</p>
+          <div className="text-display">Team</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Manage members and roles for this workspace.</p>
         </div>
         {canManage && <button className="btn primary" onClick={() => setShowNew(true)}>+ Add Member</button>}
       </div>
 
       <div className="card card-pad mt16">
-        {loading ? <Loading /> : members.length === 0 ? <Empty text="No members." /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <tr key={i}>
+                  <td className="row" style={{ gap: 10 }}><Skeleton width={32} height={32} radius={999} /><Skeleton width={100} height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width={90} height={20} radius={999} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : members.length === 0 ? (
+          <EmptyState icon={Users} title="No members" description="Team members added to this workspace will show up here." />
+        ) : (
           <table className="table">
             <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
             <tbody>
               {members.map((m) => (
                 <tr key={m.id}>
-                  <td><strong>{m.firstName} {m.lastName}</strong></td>
+                  <td>
+                    <div className="row" style={{ gap: 10 }}>
+                      <Avatar name={`${m.firstName} ${m.lastName}`} />
+                      <span className="text-title">{m.firstName} {m.lastName}</span>
+                    </div>
+                  </td>
                   <td className="subtle">{m.email}</td>
                   <td>
                     {canManage && m.role !== 'OWNER' ? (
@@ -61,7 +81,7 @@ export default function Team() {
       </div>
 
       <div className="mt16">
-        <div className="h2">My Security</div>
+        <div className="text-h2" style={{ marginBottom: 12 }}>My Security</div>
         <TwoFactorSettings />
       </div>
 
