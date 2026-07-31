@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Send, Inbox as InboxIcon, MousePointerClick } from 'lucide-react';
 import { api } from '../lib/api';
-import { Badge, Loading, Empty } from '../components/ui';
+import { Badge, Avatar, EmptyState, SkeletonRows } from '../components/ui';
 
 interface Conv { id: string; channel: string; type: string; customerName?: string | null; unreadCount: number; lead?: { id: string; name: string } | null; lastMessage?: { body: string } | null; }
 interface Message { id: string; direction: string; body: string; status: string; createdAt: string; isSimulation: boolean; type: string; }
@@ -95,38 +95,60 @@ export default function Inbox() {
 
   return (
     <div>
-      <div className="h1">Inbox</div>
-      <p className="subtle" style={{ marginTop: 0 }}>Instagram DMs and comments in one place.</p>
+      <div className="text-display">Inbox</div>
+      <p className="subtle" style={{ marginTop: 4 }}>Instagram DMs and comments in one place.</p>
 
-      <div className="row" style={{ gap: 6, marginTop: 8 }}>
-        <button className={`btn sm ${tab === 'DM' ? 'primary' : 'outline'}`} onClick={() => switchTab('DM')}>Direct Messages</button>
-        <button className={`btn sm ${tab === 'COMMENT' ? 'primary' : 'outline'}`} onClick={() => switchTab('COMMENT')}>Comments</button>
+      <div className="segment mt16">
+        <button className={`segment-btn ${tab === 'DM' ? 'active' : ''}`} onClick={() => switchTab('DM')}>Direct Messages</button>
+        <button className={`segment-btn ${tab === 'COMMENT' ? 'active' : ''}`} onClick={() => switchTab('COMMENT')}>Comments</button>
       </div>
 
       <div className="inbox mt16">
         <div className="card" style={{ overflow: 'hidden' }}>
-          {loading ? <Loading /> : filtered.length === 0 ? <Empty text={tab === 'DM' ? 'No direct messages yet.' : 'No comments yet.'} /> :
+          {loading ? (
+            <div className="card-pad"><SkeletonRows rows={5} /></div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={InboxIcon}
+              title={tab === 'DM' ? 'No direct messages yet' : 'No comments yet'}
+              description={tab === 'DM' ? "New DMs to your connected account will show up here." : 'Comments on your Instagram posts will show up here.'}
+            />
+          ) : (
             filtered.map((c) => (
               <div key={c.id} className={`conv-item ${active === c.id ? 'active' : ''}`} onClick={() => openThread(c.id)}>
-                <div className="row between">
-                  <strong>{c.customerName || c.lead?.name || 'Unknown'}</strong>
-                  <span className="row" style={{ gap: 4 }}>
-                    {c.unreadCount > 0 && <span className="badge new">{c.unreadCount}</span>}
-                    <Badge value={c.channel} />
-                  </span>
-                </div>
-                <div className="subtle" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {c.lastMessage?.body || '—'}
+                <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+                  <Avatar name={c.customerName || c.lead?.name || 'Unknown'} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="row between">
+                      <span className="text-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.customerName || c.lead?.name || 'Unknown'}
+                      </span>
+                      {c.unreadCount > 0 && <span className="badge new" style={{ flexShrink: 0 }}>{c.unreadCount}</span>}
+                    </div>
+                    <div className="text-small" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {c.lastMessage?.body || '—'}
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            ))
+          )}
         </div>
 
-        <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', minHeight: 400 }}>
-          {!thread ? <Empty text="Select a conversation" /> : (
+        <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', minHeight: 460 }}>
+          {!thread ? (
+            <EmptyState
+              icon={MousePointerClick}
+              title="Select a conversation"
+              description="Pick a conversation from the list to view messages and reply."
+            />
+          ) : (
             <>
-              <div className="row between" style={{ marginBottom: 12 }}>
-                <strong>{thread.customerName || 'Conversation'} <Badge value={thread.channel} /></strong>
+              <div className="row between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <div className="row" style={{ gap: 8 }}>
+                  <span className="text-title">{thread.customerName || 'Conversation'}</span>
+                  <Badge value={thread.channel} />
+                </div>
                 <div className="row" style={{ gap: 6 }}>
                   <button className="btn sm outline" onClick={getSummary} disabled={aiBusy}><Sparkles size={14} /> Summarize</button>
                   <button className="btn sm outline" onClick={getSentiment} disabled={aiBusy}><Sparkles size={14} /> Sentiment</button>
@@ -153,17 +175,16 @@ export default function Inbox() {
                 {thread.messages.map((m) => (
                   <div key={m.id} className={`msg ${m.direction === 'INBOUND' ? 'in' : 'out'}`}>
                     {m.body}
-                    {m.direction === 'OUTBOUND' && (
-                      <div style={{ fontSize: 11, opacity: .8, marginTop: 4 }}>
-                        {m.status}{m.isSimulation ? ' · simulated' : ''}
-                      </div>
-                    )}
+                    <div className="msg-meta">
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {m.direction === 'OUTBOUND' && ` · ${m.status}${m.isSimulation ? ' · simulated' : ''}`}
+                    </div>
                   </div>
                 ))}
               </div>
               <form onSubmit={send} className="row mt8">
                 <input className="input" placeholder="Type a reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
-                <button className="btn primary">Send</button>
+                <button className="btn primary" disabled={!reply.trim()}><Send size={14} /> Send</button>
               </form>
               <div className="hint">
                 {instagramConnected

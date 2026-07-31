@@ -247,14 +247,22 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .deal-card .title { font-weight: 600; }
 .deal-card .val { color: var(--success); font-weight: 700; margin-top: 4px; }
 
+/* Segmented tab control (Inbox DM/Comments, etc.) */
+.segment { display: inline-flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+.segment-btn { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: none; cursor: pointer; transition: background .12s ease, color .12s ease; }
+.segment-btn:hover { color: var(--text); }
+.segment-btn.active { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
+
 /* Inbox */
 .inbox { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
 @media (max-width: 800px) { .inbox { grid-template-columns: 1fr; } }
-.conv-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.conv-item:hover, .conv-item.active { background: var(--primary-50); }
+.conv-item { padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s ease; }
+.conv-item:hover { background: var(--bg); }
+.conv-item.active { background: var(--primary-50); }
 .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; }
 .msg.in { background: #f1f5f9; }
 .msg.out { background: var(--primary); color: #fff; margin-left: auto; }
+.msg-meta { font-size: 11px; opacity: .75; margin-top: 4px; }
 
 /* Misc */
 .row { display: flex; align-items: center; gap: 12px; }
