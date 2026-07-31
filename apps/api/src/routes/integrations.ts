@@ -166,6 +166,33 @@ router.post(
   })
 );
 
+const correctIdSchema = z.object({ externalId: z.string().min(1) });
+
+/**
+ * PATCH /api/v1/integrations/:id/external-id — manual correction for the id
+ * used to match inbound webhook events to this account. Needed because
+ * Instagram's Login-flow /me id does not always match the id Meta sends in
+ * webhook entry.id for the same account (confirmed empirically) — until
+ * that's resolved generically, an org can correct it directly here using
+ * the id seen in a real delivered webhook event.
+ */
+router.patch(
+  '/:id/external-id',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { externalId } = correctIdSchema.parse(req.body);
+    const account = await prisma.integrationAccount.findFirst({
+      where: { id: req.params.id, organizationId: req.org!.organizationId },
+    });
+    if (!account) throw NotFound('Integration not found');
+    const updated = await prisma.integrationAccount.update({
+      where: { id: account.id },
+      data: { externalId },
+    });
+    res.json({ id: updated.id, externalId: updated.externalId });
+  })
+);
+
 /** POST /api/v1/integrations/:id/disconnect */
 router.post(
   '/:id/disconnect',
