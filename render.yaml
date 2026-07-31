@@ -4,7 +4,11 @@ services:
     name: leados-api
     env: node
     plan: free
-    buildCommand: pnpm install --prod=false && pnpm --filter @leados/api build
+    # `prisma db push` here syncs the production DB schema on every deploy —
+    # this project uses Prisma's push workflow (no migrations/ folder), same
+    # as local dev and CI. Safe: every schema change so far is additive
+    # (new nullable columns / new tables), never a narrowing change.
+    buildCommand: pnpm install --prod=false && pnpm --filter @leados/api build && pnpm --filter @leados/api exec prisma db push --accept-data-loss --skip-generate
     startCommand: pnpm --filter @leados/api start
     envVars:
       - key: NODE_ENV
