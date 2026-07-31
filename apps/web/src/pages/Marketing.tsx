@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
+import { Target, Bot, UserCircle2, Briefcase, MessageCircle, ShieldCheck, Check } from 'lucide-react';
 
 const features = [
-  { ic: '🎯', title: 'Unified Lead Capture', desc: 'Instagram, WhatsApp, Facebook, website, referrals and manual — every lead in one place.' },
-  { ic: '🤖', title: 'AI-Ready Assistant', desc: 'Rule-based capture today, AI scoring & reply suggestions ready to switch on.' },
-  { ic: '👤', title: 'Customer 360', desc: 'Full identity, timeline, messages, deals, tasks and next best action per customer.' },
-  { ic: '🗂️', title: 'Visual Pipeline', desc: 'Drag deals across stages with live totals and probability.' },
-  { ic: '💬', title: 'Social Inbox', desc: 'Centralize conversations and convert any chat into a tracked lead.' },
-  { ic: '🛡️', title: 'Safe Multi-Tenant', desc: 'Strict organization isolation with a Super Admin control panel.' },
+  { ic: Target, title: 'Unified Lead Capture', desc: 'Instagram, WhatsApp, Facebook, website, referrals and manual — every lead in one place.' },
+  { ic: Bot, title: 'AI-Ready Assistant', desc: 'Rule-based capture today, AI scoring & reply suggestions ready to switch on.' },
+  { ic: UserCircle2, title: 'Customer 360', desc: 'Full identity, timeline, messages, deals, tasks and next best action per customer.' },
+  { ic: Briefcase, title: 'Visual Pipeline', desc: 'Drag deals across stages with live totals and probability.' },
+  { ic: MessageCircle, title: 'Social Inbox', desc: 'Centralize conversations and convert any chat into a tracked lead.' },
+  { ic: ShieldCheck, title: 'Safe Multi-Tenant', desc: 'Strict organization isolation with a Super Admin control panel.' },
 ];
 
 export default function Marketing() {
@@ -42,7 +43,7 @@ export default function Marketing() {
         <div className="grid grid-3">
           {features.map((f) => (
             <div key={f.title} className="card feature">
-              <div className="ic">{f.ic}</div>
+              <div className="ic"><f.ic size={22} /></div>
               <div className="h2" style={{ marginBottom: 6 }}>{f.title}</div>
               <div className="subtle">{f.desc}</div>
             </div>
@@ -86,7 +87,11 @@ export default function Marketing() {
               <div className="amt">{p.amt}</div>
               <div className="subtle">{p.note}</div>
               <div className="mt16" style={{ textAlign: 'left' }}>
-                {p.feats.map((f) => <div key={f} className="mt8">✓ {f}</div>)}
+                {p.feats.map((f) => (
+                  <div key={f} className="row mt8" style={{ gap: 8, alignItems: 'center' }}>
+                    <Check size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} /> {f}
+                  </div>
+                ))}
               </div>
               <Link to="/signup" className={`btn ${p.hi ? 'primary' : 'outline'} block mt16`}>Choose {p.name}</Link>
             </div>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
 
 export function Badge({ value }: { value: string }) {
   const cls = value.toLowerCase().replace(/\s+/g, '_');
@@ -59,7 +60,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
       <div className="card card-pad" style={{ width: '100%', maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 14 }}>
           <div className="h2" style={{ margin: 0 }}>{title}</div>
-          <button className="btn sm" onClick={onClose}>✕</button>
+          <button className="btn sm" onClick={onClose} aria-label="Close"><X size={16} /></button>
         </div>
         {children}
       </div>

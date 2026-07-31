@@ -1,6 +1,21 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
+import {
+  LayoutDashboard,
+  MessageCircle,
+  Target,
+  Bot,
+  Clock,
+  Plug,
+  Users,
+  ScrollText,
+  ShieldCheck,
+  Menu,
+  Search,
+  Sun,
+  Moon,
+} from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { useI18n, LOCALES, type Locale } from '../lib/i18n';
@@ -15,14 +30,13 @@ import { KeyboardShortcuts } from './KeyboardShortcuts';
 // implemented and reachable by direct URL — just not linked from the sidebar,
 // per the product decision to ship an Instagram-only front door for now.
 const nav = [
-  { to: '/app', key: 'nav.dashboard', icon: '📊', end: true },
-  { to: '/app/inbox', key: 'nav.inbox', icon: '💬' },
-  { to: '/app/leads', key: 'nav.leads', icon: '🎯' },
-  { to: '/app/auto-reply-rules', key: 'nav.autoReplyRules', icon: '🤖' },
-  { to: '/app/follow-ups', key: 'nav.followUps', icon: '⏱️' },
-  { to: '/app/integrations', key: 'nav.integrations', icon: '🔌' },
-  { to: '/app/team', key: 'nav.team', icon: '👥' },
-  { to: '/app/api-docs', key: 'nav.apiDocs', icon: '📖' },
+  { to: '/app', key: 'nav.dashboard', icon: LayoutDashboard, end: true },
+  { to: '/app/inbox', key: 'nav.inbox', icon: MessageCircle },
+  { to: '/app/leads', key: 'nav.leads', icon: Target },
+  { to: '/app/auto-reply-rules', key: 'nav.autoReplyRules', icon: Bot },
+  { to: '/app/follow-ups', key: 'nav.followUps', icon: Clock },
+  { to: '/app/integrations', key: 'nav.integrations', icon: Plug },
+  { to: '/app/team', key: 'nav.team', icon: Users },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -43,17 +57,17 @@ export function Layout({ children }: { children: ReactNode }) {
           onClick={() => setMenuOpen(false)}
           className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
         >
-          <span>{n.icon}</span> {t(n.key)}
+          <n.icon size={18} strokeWidth={2} /> {t(n.key)}
         </NavLink>
       ))}
       {(currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN') && (
         <NavLink to="/app/audit" onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <span>📜</span> {t('nav.audit')}
+          <ScrollText size={18} strokeWidth={2} /> {t('nav.audit')}
         </NavLink>
       )}
       {user?.isSuperAdmin && (
         <NavLink to="/admin" onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} style={{ marginTop: 8 }}>
-          <span>🛡️</span> {t('nav.superAdmin')}
+          <ShieldCheck size={18} strokeWidth={2} /> {t('nav.superAdmin')}
         </NavLink>
       )}
       <div className="spacer" />
@@ -87,7 +101,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="main">
         <div className="topbar">
           <div className="row">
-            <button className="hamburger" aria-label="Menu" onClick={() => setMenuOpen((o) => !o)}>☰</button>
+            <button className="hamburger" aria-label="Menu" onClick={() => setMenuOpen((o) => !o)}><Menu size={20} /></button>
             {orgs.length > 1 ? (
               <select
                 className="select"
@@ -110,7 +124,7 @@ export function Layout({ children }: { children: ReactNode }) {
               title="Search (⌘K)"
               onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
             >
-              🔍 Search <span style={{ opacity: 0.6, marginLeft: 6 }}>⌘K</span>
+              <Search size={15} /> Search <span style={{ opacity: 0.6, marginLeft: 6 }}>⌘K</span>
             </button>
           </div>
           <div className="row">
@@ -128,7 +142,7 @@ export function Layout({ children }: { children: ReactNode }) {
               ))}
             </select>
             <button className="btn sm outline" onClick={toggle} aria-label={t('common.theme')} title={t('common.theme')}>
-              {theme === 'dark' ? '☀️' : '🌙'}
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <NotificationBell />
             <span className="subtle hide-sm">{user?.firstName} {user?.lastName}</span>

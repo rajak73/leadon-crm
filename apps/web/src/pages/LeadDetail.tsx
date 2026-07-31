@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import {
+  PlusCircle, ArrowRightLeft, StickyNote, IdCard, Sparkles, Briefcase, Cog, MessageSquareReply, UserCheck, Pencil,
+} from 'lucide-react';
 import { api } from '../lib/api';
 import { Card, Badge, Loading, Empty, money } from '../components/ui';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
@@ -16,10 +19,18 @@ interface Lead {
   conversations: { id: string; channel: string; type?: string; externalId?: string | null; messages: { id: string; direction: string; body: string }[] }[];
 }
 
-const ACT_ICON: Record<string, string> = {
-  LEAD_CREATED: '➕', LEAD_STATUS_CHANGED: '🔀', NOTE_ADDED: '📝',
-  LEAD_DETAILS_CAPTURED: '📇', LEAD_SCORED: '✨', DEAL_CREATED: '🗂️', WORKFLOW_RUN: '⚙️',
+const ACT_ICON: Record<string, typeof PlusCircle> = {
+  LEAD_CREATED: PlusCircle,
+  LEAD_STATUS_CHANGED: ArrowRightLeft,
+  NOTE_ADDED: StickyNote,
+  LEAD_DETAILS_CAPTURED: IdCard,
+  LEAD_SCORED: Sparkles,
+  DEAL_CREATED: Briefcase,
+  WORKFLOW_RUN: Cog,
+  AUTO_REPLY_TRIGGERED: MessageSquareReply,
+  AUTO_REPLY_ASSIGNED_HUMAN: UserCheck,
 };
+const DEFAULT_ACT_ICON = StickyNote;
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -105,11 +116,11 @@ export default function LeadDetail() {
             <span className="subtle">Score: <strong>{lead.score}</strong></span>
           </div>
         </div>
-        <button className="btn outline" onClick={scoreLead}>✨ Re-score</button>
+        <button className="btn outline" onClick={scoreLead}><Sparkles size={14} /> Re-score</button>
       </div>
 
       <div className="grid grid-3 mt16">
-        <Card title="Details" action={!editing ? <button className="btn sm outline" onClick={startEdit}>✏️ Edit</button> : undefined}>
+        <Card title="Details" action={!editing ? <button className="btn sm outline" onClick={startEdit}><Pencil size={14} /> Edit</button> : undefined}>
           {editing ? (
             <div>
               <div className="field"><label>Name</label><input className="input" aria-label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
@@ -195,15 +206,18 @@ export default function LeadDetail() {
           </div>
           {lead.activities.length === 0 ? <Empty text="No activity yet." /> : (
             <div style={{ position: 'relative' }}>
-              {lead.activities.map((a) => (
+              {lead.activities.map((a) => {
+                const Icon = ACT_ICON[a.type] ?? DEFAULT_ACT_ICON;
+                return (
                 <div key={a.id} className="row" style={{ gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                  <span>{ACT_ICON[a.type] ?? '•'}</span>
+                  <Icon size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14 }}>{a.message}</div>
                     <div className="subtle" style={{ fontSize: 12 }}>{a.type.replace(/_/g, ' ')} · {new Date(a.createdAt).toLocaleString()}</div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

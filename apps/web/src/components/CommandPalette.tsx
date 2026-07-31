@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Target, User, Briefcase } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Item { id: string; label: string; sub: string; link: string; type: string }
 interface Results { leads: any[]; contacts: any[]; deals: any[] }
 
-const TYPE_ICON: Record<string, string> = { lead: '🎯', contact: '👤', deal: '🗂️' };
+const TYPE_ICON: Record<string, typeof Target> = { lead: Target, contact: User, deal: Briefcase };
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -93,7 +94,7 @@ export function CommandPalette() {
               onClick={() => choose(it)}
               style={{ display: 'flex', gap: 10, padding: '10px 16px', cursor: 'pointer', background: i === active ? 'var(--primary-50)' : 'transparent' }}
             >
-              <span>{TYPE_ICON[it.type]}</span>
+              {(() => { const Icon = TYPE_ICON[it.type]; return Icon ? <Icon size={16} style={{ flexShrink: 0, marginTop: 3 }} /> : null; })()}
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600 }}>{it.label}</div>
                 <div className="subtle" style={{ fontSize: 12 }}>{it.type} · {it.sub}</div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 
 /**
  * Global keyboard shortcuts. "g then <key>" navigates; "?" shows help; "n"
@@ -85,7 +86,7 @@ export function KeyboardShortcuts() {
           <div className="card card-pad" style={{ width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div className="row between" style={{ marginBottom: 12 }}>
               <div className="h2" style={{ margin: 0 }}>Keyboard Shortcuts</div>
-              <button className="btn sm" onClick={() => setShowHelp(false)}>✕</button>
+              <button className="btn sm" onClick={() => setShowHelp(false)} aria-label="Close"><X size={16} /></button>
             </div>
             {HELP.map((h) => (
               <div key={h.keys} className="row between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>

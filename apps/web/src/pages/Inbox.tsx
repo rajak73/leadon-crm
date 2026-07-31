@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { Badge, Loading, Empty } from '../components/ui';
 
@@ -127,9 +128,9 @@ export default function Inbox() {
               <div className="row between" style={{ marginBottom: 12 }}>
                 <strong>{thread.customerName || 'Conversation'} <Badge value={thread.channel} /></strong>
                 <div className="row" style={{ gap: 6 }}>
-                  <button className="btn sm outline" onClick={getSummary} disabled={aiBusy}>✨ Summarize</button>
-                  <button className="btn sm outline" onClick={getSentiment} disabled={aiBusy}>✨ Sentiment</button>
-                  <button className="btn sm outline" onClick={getSuggestions} disabled={aiBusy}>✨ Suggest reply</button>
+                  <button className="btn sm outline" onClick={getSummary} disabled={aiBusy}><Sparkles size={14} /> Summarize</button>
+                  <button className="btn sm outline" onClick={getSentiment} disabled={aiBusy}><Sparkles size={14} /> Sentiment</button>
+                  <button className="btn sm outline" onClick={getSuggestions} disabled={aiBusy}><Sparkles size={14} /> Suggest reply</button>
                   {thread.lead ? (
                     <Link className="btn sm outline" to={`/app/leads/${thread.lead.id}`}>View Lead Profile</Link>
                   ) : thread.type !== 'COMMENT' && (

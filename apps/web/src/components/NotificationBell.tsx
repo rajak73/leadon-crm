@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, Target, AlarmClock, Cog } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Notification {
@@ -12,11 +13,11 @@ interface Notification {
   createdAt: string;
 }
 
-const ICONS: Record<string, string> = {
-  LEAD_CAPTURED: '🎯',
-  TASK_DUE: '⏰',
-  WORKFLOW_RUN: '⚙️',
-  SYSTEM: '🔔',
+const ICONS: Record<string, typeof Bell> = {
+  LEAD_CAPTURED: Target,
+  TASK_DUE: AlarmClock,
+  WORKFLOW_RUN: Cog,
+  SYSTEM: Bell,
 };
 
 export function NotificationBell() {
@@ -75,7 +76,7 @@ export function NotificationBell() {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button className="btn sm outline" onClick={toggle} aria-label="Notifications" title="Notifications" style={{ position: 'relative' }}>
-        🔔
+        <Bell size={16} />
         {unread > 0 && (
           <span style={{
             position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff',
@@ -104,7 +105,7 @@ export function NotificationBell() {
               }}
             >
               <div className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
-                <span>{ICONS[n.type] ?? '🔔'}</span>
+                {(() => { const Icon = ICONS[n.type] ?? Bell; return <Icon size={16} style={{ flexShrink: 0, marginTop: 2 }} />; })()}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</div>
                   {n.body && <div className="subtle" style={{ fontSize: 12 }}>{n.body}</div>}

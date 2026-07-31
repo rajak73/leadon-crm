@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Sparkles, X, Save, Upload } from 'lucide-react';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
@@ -157,10 +158,12 @@ export default function Leads() {
         <div className="row" style={{ gap: 8 }}>
           <button className="btn outline" onClick={exportCsv}>⬇ {t('leads.export')}</button>
           <label className="btn outline" style={{ cursor: 'pointer' }}>
-            ⬆ {t('leads.import')}
+            <Upload size={14} /> {t('leads.import')}
             <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importCsv} />
           </label>
-          <button className="btn outline" onClick={scoreAll} disabled={scoring}>{scoring ? '…' : '✨ ' + t('leads.scoreAll')}</button>
+          <button className="btn outline" onClick={scoreAll} disabled={scoring}>
+            {scoring ? '…' : <><Sparkles size={14} /> {t('leads.scoreAll')}</>}
+          </button>
           <button className="btn primary" onClick={() => setShowNew(true)}>+ {t('leads.new')}</button>
         </div>
       </div>
@@ -172,7 +175,7 @@ export default function Leads() {
           {views.map((v) => (
             <span key={v.id} className="badge gray" style={{ cursor: 'pointer' }} onClick={() => applyView(v)}>
               {v.name}
-              <span onClick={(e) => { e.stopPropagation(); deleteView(v.id); }} style={{ marginLeft: 6, opacity: 0.6 }}>✕</span>
+              <span onClick={(e) => { e.stopPropagation(); deleteView(v.id); }} style={{ marginLeft: 6, opacity: 0.6, display: 'inline-flex', verticalAlign: 'middle' }}><X size={12} /></span>
             </span>
           ))}
         </div>
@@ -197,7 +200,7 @@ export default function Leads() {
             {members.filter((m) => m.userId !== user?.id).map((m) => <option key={m.userId} value={m.userId}>{m.firstName} {m.lastName}</option>)}
           </select>
           <button className="btn outline" onClick={load}>{t('common.search')}</button>
-          <button className="btn outline" onClick={saveView} title="Save current filters as a view">💾 Save view</button>
+          <button className="btn outline" onClick={saveView} title="Save current filters as a view"><Save size={14} /> Save view</button>
         </div>
 
         {/* Bulk action bar */}
