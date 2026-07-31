@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Clock } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, Modal } from '../components/ui';
+import { Card, Badge, EmptyState, Skeleton, SkeletonRows, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 interface Rule { id: string; name: string; delayHours: number; template: string; isActive: boolean; createdAt: string; }
@@ -32,10 +33,10 @@ export default function FollowUps() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Follow-up Sequences</div>
-          <p className="subtle" style={{ marginTop: 0 }}>
+          <div className="text-display">Follow-up Sequences</div>
+          <p className="subtle" style={{ marginTop: 4 }}>
             Automatically message a lead if they haven't replied within a set number of hours.
           </p>
         </div>
@@ -44,7 +45,28 @@ export default function FollowUps() {
 
       <div className="mt16">
         <Card title="Rules">
-          {loading ? <Loading /> : rules.length === 0 ? <Empty text="No follow-up rules yet." /> : (
+          {loading ? (
+            <table className="table">
+              <tbody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i}>
+                    <td><Skeleton width="50%" height={13} /></td>
+                    <td><Skeleton width="40%" height={13} /></td>
+                    <td><Skeleton width="70%" height={13} /></td>
+                    <td><Skeleton width={60} height={20} radius={999} /></td>
+                    <td />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : rules.length === 0 ? (
+            <EmptyState
+              icon={Clock}
+              title="No follow-up rules yet"
+              description="Create a rule to automatically re-engage a lead who hasn't replied within a set number of hours."
+              action={canManage ? <button className="btn primary sm" onClick={() => setShowNew(true)}>+ New rule</button> : undefined}
+            />
+          ) : (
             <table className="table">
               <thead><tr><th>Name</th><th>Delay</th><th>Template</th><th>Status</th><th></th></tr></thead>
               <tbody>
@@ -115,7 +137,9 @@ function ExecutionLog({ rule, onClose }: { rule: Rule; onClose: () => void }) {
 
   return (
     <Modal title={`Execution log — ${rule.name}`} onClose={onClose}>
-      {!executions ? <Loading /> : executions.length === 0 ? <Empty text="No executions yet." /> : (
+      {!executions ? <SkeletonRows rows={3} /> : executions.length === 0 ? (
+        <EmptyState icon={Clock} title="No executions yet" description="This rule hasn't fired for any lead yet." />
+      ) : (
         <table className="table">
           <tbody>
             {executions.map((e) => (

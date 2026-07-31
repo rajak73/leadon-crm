@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Bot } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, Modal } from '../components/ui';
+import { Card, Badge, EmptyState, Skeleton, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 interface Rule {
@@ -35,10 +36,10 @@ export default function AutoReplyRules() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Auto Reply Rules</div>
-          <p className="subtle" style={{ marginTop: 0 }}>
+          <div className="text-display">Auto Reply Rules</div>
+          <p className="subtle" style={{ marginTop: 4 }}>
             Keyword rules for inbound DMs and comments — e.g. "contains price" → send pricing info, or assign to a human.
           </p>
         </div>
@@ -47,16 +48,38 @@ export default function AutoReplyRules() {
 
       <div className="mt16">
         <Card title="Rules (evaluated in priority order, lowest first)">
-          {loading ? <Loading /> : rules.length === 0 ? <Empty text="No auto-reply rules yet." /> : (
+          {loading ? (
+            <table className="table">
+              <tbody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i}>
+                    <td style={{ width: 60 }}><Skeleton width={20} height={13} /></td>
+                    <td><Skeleton width="50%" height={13} /></td>
+                    <td><Skeleton width="70%" height={13} /></td>
+                    <td><Skeleton width="60%" height={13} /></td>
+                    <td><Skeleton width={60} height={20} radius={999} /></td>
+                    <td />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : rules.length === 0 ? (
+            <EmptyState
+              icon={Bot}
+              title="No auto-reply rules yet"
+              description="Without a matching rule, every DM and comment still gets an AI-generated reply automatically — rules just let you override that with an exact message for specific keywords."
+              action={canManage ? <button className="btn primary sm" onClick={() => setShowNew(true)}>+ New rule</button> : undefined}
+            />
+          ) : (
             <table className="table">
               <thead><tr><th>Priority</th><th>Name</th><th>Match</th><th>Action</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {rules.map((r) => (
                   <tr key={r.id}>
                     <td className="subtle">{r.priority}</td>
-                    <td>{r.name}</td>
+                    <td className="text-title">{r.name}</td>
                     <td className="subtle">{r.matchType} "{r.keyword}"{r.caseInsensitive ? '' : ' (case-sensitive)'}</td>
-                    <td>{r.action === 'ASSIGN_HUMAN' ? <Badge value="gray" /> : null} {r.action === 'ASSIGN_HUMAN' ? 'Assign human' : `Reply: ${r.replyTemplate?.slice(0, 40)}`}</td>
+                    <td>{r.action === 'ASSIGN_HUMAN' ? 'Assign human' : `Reply: ${r.replyTemplate?.slice(0, 40)}`}</td>
                     <td><Badge value={r.isActive ? 'active' : 'gray'} /></td>
                     <td style={{ textAlign: 'right' }}>
                       {canManage && <button className="btn sm outline" onClick={() => toggle(r)}>{r.isActive ? 'Disable' : 'Enable'}</button>}{' '}

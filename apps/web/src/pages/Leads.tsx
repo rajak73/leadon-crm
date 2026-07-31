@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, X, Save, Upload } from 'lucide-react';
+import { Sparkles, X, Save, Upload, Download, Target } from 'lucide-react';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
-import { Badge, Card, Loading, Empty, Modal } from '../components/ui';
+import { Badge, Modal, EmptyState, Skeleton } from '../components/ui';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
+
+function scoreColor(score: number): string {
+  if (score >= 70) return 'var(--success)';
+  if (score >= 40) return 'var(--warning)';
+  return 'var(--danger)';
+}
 
 interface Lead {
   id: string;
@@ -150,13 +156,13 @@ export default function Leads() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">{t('leads.title')}</div>
-          <p className="subtle" style={{ marginTop: 0 }}>{t('leads.subtitle')}</p>
+          <div className="text-display">{t('leads.title')}</div>
+          <p className="subtle" style={{ marginTop: 4 }}>{t('leads.subtitle')}</p>
         </div>
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn outline" onClick={exportCsv}>⬇ {t('leads.export')}</button>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn outline" onClick={exportCsv}><Download size={14} /> {t('leads.export')}</button>
           <label className="btn outline" style={{ cursor: 'pointer' }}>
             <Upload size={14} /> {t('leads.import')}
             <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importCsv} />
@@ -229,7 +235,30 @@ export default function Leads() {
           </div>
         )}
 
-        {loading ? <Loading /> : leads.length === 0 ? <Empty text={t('leads.empty')} /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i}>
+                  <td style={{ width: 32 }}><Skeleton width={14} height={14} radius={4} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width="70%" height={13} /></td>
+                  <td><Skeleton width={70} height={20} radius={999} /></td>
+                  <td><Skeleton width={70} height={20} radius={999} /></td>
+                  <td><Skeleton width={24} height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : leads.length === 0 ? (
+          <EmptyState
+            icon={Target}
+            title={t('leads.empty')}
+            description="Leads created manually or captured automatically from Instagram DMs will show up here."
+            action={<button className="btn primary sm" onClick={() => setShowNew(true)}>+ {t('leads.new')}</button>}
+          />
+        ) : (
           <table className="table">
             <thead>
               <tr>
@@ -245,7 +274,7 @@ export default function Leads() {
                   <td className="subtle">{l.phone || l.email || '—'}</td>
                   <td><Badge value={l.source} /></td>
                   <td><Badge value={l.status} /></td>
-                  <td>{l.score}</td>
+                  <td><strong style={{ color: scoreColor(l.score) }}>{l.score}</strong></td>
                   <td className="subtle">{new Date(l.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
