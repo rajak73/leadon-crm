@@ -2,7 +2,7 @@ import { Router, raw, urlencoded } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../prisma.js';
 import { asyncHandler } from '../middleware/error.js';
-import { verifyHandshake, verifySignature } from '../services/meta/verify.js';
+import { verifyHandshake, checkSignature } from '../services/meta/verify.js';
 import { parseMetaPayload } from '../services/meta/parser.js';
 import { resolveOrgByRecipient } from '../services/meta/resolve.js';
 import { enqueueWebhookEvent, isQueueEnabled } from '../services/bullmq.js';
@@ -75,8 +75,15 @@ router.post(
     const signature = req.header('x-hub-signature-256');
 
     // Reject anything we can't cryptographically trust (BRD §16, §11.3).
-    if (!verifySignature(rawBody, signature)) {
-      logger.warn('meta_webhook_bad_signature', { hasSignatureHeader: Boolean(signature), bodyLen: rawBody.length });
+    const sigCheck = checkSignature(rawBody, signature);
+    if (!sigCheck.valid) {
+      logger.warn('meta_webhook_bad_signature', {
+        bodyLen: rawBody.length,
+        reason: sigCheck.reason,
+        providedPrefix: sigCheck.providedPrefix,
+        expectedPrefix: sigCheck.expectedPrefix,
+        contentType: req.header('content-type'),
+      });
       return res.status(401).json({ error: 'Invalid signature' });
     }
 

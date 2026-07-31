@@ -30,21 +30,40 @@ export function verifyHandshake(query: Record<string, unknown>): string | null {
   return null;
 }
 
+export interface SignatureCheck {
+  valid: boolean;
+  reason?: string;
+  // First 10 hex chars only — enough to compare across log lines without
+  // ever exposing the full signature or the secret itself.
+  providedPrefix?: string;
+  expectedPrefix?: string;
+}
+
 /**
  * Validate the X-Hub-Signature-256 header against the raw body.
  * Requires META_APP_SECRET. Returns false if secret missing or mismatch.
  */
 export function verifySignature(rawBody: Buffer, signatureHeader: string | undefined): boolean {
+  return checkSignature(rawBody, signatureHeader).valid;
+}
+
+/** Same check as verifySignature, but with diagnostic detail for logging. */
+export function checkSignature(rawBody: Buffer, signatureHeader: string | undefined): SignatureCheck {
   const appSecret = config.meta.appSecret;
-  if (!appSecret) return false; // no secret → cannot trust → reject (BRD §11.3)
-  if (!signatureHeader || !signatureHeader.startsWith('sha256=')) return false;
+  if (!appSecret) return { valid: false, reason: 'no_app_secret_configured' };
+  if (!signatureHeader) return { valid: false, reason: 'no_signature_header' };
+  if (!signatureHeader.startsWith('sha256=')) return { valid: false, reason: 'unexpected_signature_prefix' };
 
   const provided = signatureHeader.slice('sha256='.length);
   const expected = crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
 
-  // Constant-time comparison (guard against length mismatch).
   const a = Buffer.from(provided, 'hex');
   const b = Buffer.from(expected, 'hex');
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  const providedPrefix = provided.slice(0, 10);
+  const expectedPrefix = expected.slice(0, 10);
+  if (a.length !== b.length) {
+    return { valid: false, reason: 'length_mismatch', providedPrefix, expectedPrefix };
+  }
+  const valid = crypto.timingSafeEqual(a, b);
+  return { valid, reason: valid ? undefined : 'hmac_mismatch', providedPrefix, expectedPrefix };
 }
