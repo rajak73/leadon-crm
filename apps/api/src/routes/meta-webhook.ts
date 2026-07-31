@@ -6,6 +6,7 @@ import { verifyHandshake, checkSignature } from '../services/meta/verify.js';
 import { parseMetaPayload } from '../services/meta/parser.js';
 import { resolveOrgByRecipient } from '../services/meta/resolve.js';
 import { enqueueWebhookEvent, isQueueEnabled } from '../services/bullmq.js';
+import { processOneEvent } from '../services/queue.js';
 import { parseSignedRequest } from '../services/meta/signed-request.js';
 import { handleDataDeletion, getDeletionStatus } from '../services/meta/data-deletion.js';
 import { config, hasRealMetaCreds } from '../config.js';
@@ -124,6 +125,13 @@ router.post(
           }),
         },
       });
+      // Process immediately — no reason to wait for the next cron tick when
+      // we're already handling the request. The cron drain remains as a
+      // safety net for anything that fails here (network blip, transient
+      // DB error) or a backlog from before this ran. Also enqueue to a real
+      // worker if one's configured, for horizontal scale beyond one dyno.
+      const outcome = await processOneEvent(event);
+      logger.info('meta_webhook_processed', { eventId: event.id, ...outcome });
       await enqueueWebhookEvent(event.id).catch(() => false);
       accepted++;
     }

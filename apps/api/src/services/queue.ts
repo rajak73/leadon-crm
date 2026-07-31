@@ -11,6 +11,7 @@
  */
 import { prisma } from '../prisma.js';
 import { processInbound, type InboundPayload } from './webhook-processor.js';
+import type { WebhookEvent } from '@prisma/client';
 
 const BATCH_SIZE = 20; // small batch (BRD §19.2 cron batch size controlled)
 
@@ -24,6 +25,44 @@ export interface DrainSummary {
   failed: number;
   skipped: number;
   results: Array<{ eventId: string; status: string; detail?: string }>;
+}
+
+export interface EventOutcome {
+  status: 'PROCESSED' | 'SKIPPED_DUPLICATE' | 'FAILED';
+  detail?: string;
+}
+
+/**
+ * Process a single WebhookEvent and mark it PROCESSED/FAILED. Shared by the
+ * synchronous webhook handler (immediate processing, no delay) and the cron
+ * drain (retry safety-net for anything that failed synchronously, or a
+ * backlog left over from before this event was added).
+ */
+export async function processOneEvent(event: WebhookEvent): Promise<EventOutcome> {
+  try {
+    const payload = JSON.parse(event.payload) as InboundPayload;
+    const result = await processInbound(payload, event.isSimulation);
+
+    await prisma.webhookEvent.update({
+      where: { id: event.id },
+      data: { status: 'PROCESSED', processedAt: new Date() },
+    });
+
+    if (result.replyStatus === 'SKIPPED_DUPLICATE') {
+      return { status: 'SKIPPED_DUPLICATE' };
+    }
+    return {
+      status: 'PROCESSED',
+      detail: `lead=${result.leadId} reply=${result.replyStatus} captureState=${result.captureState}`,
+    };
+  } catch (err) {
+    // Failed jobs must not silently disappear (BRD §19.4).
+    await prisma.webhookEvent.update({
+      where: { id: event.id },
+      data: { status: 'FAILED', processedAt: new Date() },
+    });
+    return { status: 'FAILED', detail: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function drainQueues(opts: DrainOptions = {}): Promise<DrainSummary> {
@@ -46,39 +85,11 @@ export async function drainQueues(opts: DrainOptions = {}): Promise<DrainSummary
 
   for (const event of events) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) break;
-    try {
-      const payload = JSON.parse(event.payload) as InboundPayload;
-      const result = await processInbound(payload, event.isSimulation);
-
-      await prisma.webhookEvent.update({
-        where: { id: event.id },
-        data: { status: 'PROCESSED', processedAt: new Date() },
-      });
-
-      if (result.replyStatus === 'SKIPPED_DUPLICATE') {
-        summary.skipped++;
-        summary.results.push({ eventId: event.id, status: 'SKIPPED_DUPLICATE' });
-      } else {
-        summary.processed++;
-        summary.results.push({
-          eventId: event.id,
-          status: 'PROCESSED',
-          detail: `lead=${result.leadId} reply=${result.replyStatus} captureState=${result.captureState}`,
-        });
-      }
-    } catch (err) {
-      // Failed jobs must not silently disappear (BRD §19.4).
-      await prisma.webhookEvent.update({
-        where: { id: event.id },
-        data: { status: 'FAILED', processedAt: new Date() },
-      });
-      summary.failed++;
-      summary.results.push({
-        eventId: event.id,
-        status: 'FAILED',
-        detail: err instanceof Error ? err.message : String(err),
-      });
-    }
+    const outcome = await processOneEvent(event);
+    if (outcome.status === 'SKIPPED_DUPLICATE') summary.skipped++;
+    else if (outcome.status === 'PROCESSED') summary.processed++;
+    else summary.failed++;
+    summary.results.push({ eventId: event.id, status: outcome.status, detail: outcome.detail });
   }
 
   return summary;
