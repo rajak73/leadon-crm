@@ -6,11 +6,12 @@ import { useI18n } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
 import { Badge, Modal, EmptyState, Skeleton } from '../components/ui';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
+import { useToast } from '../lib/toast';
 
 function scoreColor(score: number): string {
-  if (score >= 70) return 'var(--success)';
-  if (score >= 40) return 'var(--warning)';
-  return 'var(--danger)';
+  if (score >= 70) return 'var(--success-text)';
+  if (score >= 40) return 'var(--warning-text)';
+  return 'var(--danger-text)';
 }
 
 interface Lead {
@@ -27,6 +28,7 @@ interface Lead {
 export default function Leads() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const toast = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -122,9 +124,9 @@ export default function Leads() {
     }).filter((r) => r.name);
     try {
       const res = await api.post<{ imported: number; skipped: number }>('/api/v1/leads/import', { rows });
-      alert(`Imported ${res.imported} leads (${res.skipped} skipped).`);
+      toast.success(`Imported ${res.imported} leads (${res.skipped} skipped).`);
       load();
-    } catch (err: any) { alert('Import failed: ' + err.message); }
+    } catch (err: any) { toast.error('Import failed: ' + err.message); }
     e.target.value = '';
   }
 

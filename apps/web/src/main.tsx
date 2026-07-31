@@ -5,6 +5,7 @@ import App from './App';
 import { AuthProvider } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { I18nProvider } from './lib/i18n';
+import { ToastProvider } from './lib/toast';
 import './styles.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -12,9 +13,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
         <I18nProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ToastProvider>
         </I18nProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -119,7 +119,7 @@ export default function Integrations() {
         <div className="mt16">
           <Card title="Setup required">
             <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-              <AlertTriangle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+              <AlertTriangle size={18} style={{ color: 'var(--warning-text)', flexShrink: 0, marginTop: 2 }} />
               <div>
                 <p className="hint" style={{ marginTop: 0 }}>
                   Instagram OAuth isn't configured yet. Set <code>INSTAGRAM_APP_ID</code>, <code>INSTAGRAM_APP_SECRET</code>,{' '}
@@ -212,7 +212,7 @@ export default function Integrations() {
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="row" style={{ gap: 6 }}>
-      {ok ? <CheckCircle2 size={16} style={{ color: 'var(--success)' }} /> : <XCircle size={16} style={{ color: 'var(--danger)' }} />}
+      {ok ? <CheckCircle2 size={16} style={{ color: 'var(--success-text)' }} /> : <XCircle size={16} style={{ color: 'var(--danger-text)' }} />}
       <span className="text-title">{label}</span>
       <span className="text-small">{ok ? 'subscribed' : 'not subscribed'}</span>
     </div>

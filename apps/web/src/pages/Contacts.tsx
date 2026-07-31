@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Download, Upload, Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { EmptyState, Skeleton, Modal } from '../components/ui';
+import { useToast } from '../lib/toast';
 
 interface Contact {
   id: string;
@@ -14,6 +15,7 @@ interface Contact {
 }
 
 export default function Contacts() {
+  const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -64,8 +66,8 @@ export default function Contacts() {
     }).filter((r) => r.name);
     try {
       const res = await api.post<{ imported: number; skipped: number }>('/api/v1/contacts/import', { rows });
-      alert(`Imported ${res.imported} contacts (${res.skipped} skipped).`); load();
-    } catch (err: any) { alert('Import failed: ' + err.message); }
+      toast.success(`Imported ${res.imported} contacts (${res.skipped} skipped).`); load();
+    } catch (err: any) { toast.error('Import failed: ' + err.message); }
     e.target.value = '';
   }
 

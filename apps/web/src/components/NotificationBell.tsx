@@ -79,7 +79,7 @@ export function NotificationBell() {
         <Bell size={16} />
         {unread > 0 && (
           <span style={{
-            position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff',
+            position: 'absolute', top: -6, right: -6, background: 'var(--danger-text)', color: '#fff',
             borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 16, height: 16, lineHeight: '16px', textAlign: 'center', padding: '0 4px',
           }}>{unread > 9 ? '9+' : unread}</span>
         )}

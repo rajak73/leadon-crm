@@ -1,29 +1,38 @@
-/* LeadOS design system — light premium SaaS (BRD §10.5) */
+/* LeadOS design system — ManyChat/Intercom-style premium SaaS palette */
 :root {
-  --bg: #f6f7f9;          /* off-white background */
-  --card: #ffffff;        /* white cards */
-  --border: #e6e8eb;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #4f46e5;     /* indigo */
-  --primary-600: #4338ca;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --primary: #6366f1;     /* indigo accent — focus rings, active states, tints (not solid-fill text) */
+  --primary-600: #4f46e5; /* readable indigo — text on primary-50 tints */
   --primary-50: #eef2ff;
-  --success: #16a34a;
-  --success-50: #f0fdf4;
-  --warning: #d97706;
+  --success: #10b981;
+  --success-50: #ecfdf5;
+  --warning: #f59e0b;
   --warning-50: #fffbeb;
-  --danger: #dc2626;
+  --danger: #ef4444;
   --danger-50: #fef2f2;
+  /* Solid-fill controls (buttons, chat bubbles, brand mark) put white text
+     directly on the accent color — #6366f1 measures 4.47:1 with white,
+     just under the 4.5:1 AA minimum, so solid fills use this deeper shade
+     instead (6.3:1) while --primary stays the lighter requested accent for
+     borders/rings/tints where only 3:1 is required. Same value in both
+     themes since these are fixed brand colors, not surface-relative. */
+  --primary-solid: #4f46e5;
+  --primary-solid-hover: #4338ca;
   /* Darker than --success/--warning/--danger specifically for text on the
-     matching -50 tinted background (badges) — the base tokens fail WCAG AA
-     (~3:1) at that size/weight; these pass comfortably (~4.8-5.9:1). */
+     matching -50 tinted background or white/card (badges, stat trends,
+     error text) — the base tokens fail WCAG AA (~2.5-3.8:1) at that size/
+     weight; these pass comfortably (~4.8-6.5:1). */
   --success-text: #15803d;
   --warning-text: #b45309;
   --danger-text: #b91c1c;
   --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius: 16px;    /* cards */
+  --radius-lg: 20px;
+  --radius-xl: 24px;
   --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
   --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
   --shadow-lg: 0 10px 30px rgba(16,24,40,.10);
@@ -102,7 +111,7 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 }
 .sidebar .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 17px; margin: 4px 8px 22px; color: var(--text); letter-spacing: -0.02em; }
 .sidebar .brand .logo-dot {
-  width: 26px; height: 26px; border-radius: 8px; background: var(--primary);
+  width: 26px; height: 26px; border-radius: 8px; background: var(--primary-solid);
   display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 13px; flex-shrink: 0;
 }
 .nav-link {
@@ -167,8 +176,8 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .stat .value { font-size: 26px; font-weight: 800; margin-top: 6px; }
 .stat .stat-ic { width: 30px; height: 30px; border-radius: 9px; background: var(--primary-50); color: var(--primary-600); display: grid; place-items: center; flex-shrink: 0; }
 .stat .stat-trend { font-size: 12px; font-weight: 600; margin-top: 6px; }
-.stat .stat-trend.up { color: var(--success); }
-.stat .stat-trend.down { color: var(--danger); }
+.stat .stat-trend.up { color: var(--success-text); }
+.stat .stat-trend.down { color: var(--danger-text); }
 
 /* Skeleton loaders */
 .skeleton {
@@ -225,11 +234,11 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .badge.gray { background: #f1f5f9; color: var(--muted); }
 
 /* Buttons */
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: var(--card); color: var(--text); transition: background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: var(--card); color: var(--text); transition: background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease; }
 .btn:hover { background: var(--bg); }
 .btn:active { transform: translateY(1px); }
-.btn.primary { background: var(--primary); color: #fff; box-shadow: 0 1px 2px rgba(79,70,229,.25); }
-.btn.primary:hover { background: var(--primary-600); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
+.btn.primary { background: var(--primary-solid); color: #fff; box-shadow: 0 1px 2px rgba(79,70,229,.25); }
+.btn.primary:hover { background: var(--primary-solid-hover); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
 .btn.outline { border-color: var(--border); }
 .btn.sm { padding: 6px 12px; font-size: 13px; }
 .select.sm { padding: 6px 10px; font-size: 13px; }
@@ -246,12 +255,12 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px; }
 .input, .select, .textarea {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
   font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
 }
 .input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
-.error { color: var(--danger); font-size: 13px; margin-top: 8px; }
+.error { color: var(--danger-text); font-size: 13px; margin-top: 8px; }
 
 /* Auth pages */
 .auth-wrap {
@@ -265,7 +274,7 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .auth-card .card { box-shadow: var(--shadow-lg); border-color: var(--border); }
 .auth-card .brand { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .auth-card .brand .logo-dot {
-  width: 30px; height: 30px; border-radius: 9px; background: var(--primary);
+  width: 30px; height: 30px; border-radius: 9px; background: var(--primary-solid);
   display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
 }
 
@@ -273,9 +282,9 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .kanban { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
 .kanban-col { min-width: 260px; flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
 .kanban-col h3 { font-size: 13px; margin: 4px 6px 10px; display: flex; justify-content: space-between; }
-.deal-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; box-shadow: var(--shadow); }
+.deal-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 8px; box-shadow: var(--shadow); }
 .deal-card .title { font-weight: 600; }
-.deal-card .val { color: var(--success); font-weight: 700; margin-top: 4px; }
+.deal-card .val { color: var(--success-text); font-weight: 700; margin-top: 4px; }
 
 /* Segmented tab control (Inbox DM/Comments, etc.) */
 .segment { display: inline-flex; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
@@ -291,7 +300,7 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .conv-item.active { background: var(--primary-50); }
 .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; }
 .msg.in { background: #f1f5f9; }
-.msg.out { background: var(--primary); color: #fff; margin-left: auto; }
+.msg.out { background: var(--primary-solid); color: #fff; margin-left: auto; }
 .msg-meta { font-size: 11px; opacity: .75; margin-top: 4px; }
 
 /* Misc */
@@ -304,9 +313,9 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 /* Score meter (lead score, health, etc.) */
 .score-meter { width: 96px; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
 .score-meter-fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
-.score-meter-fill.high { background: var(--success); }
-.score-meter-fill.mid { background: var(--warning); }
-.score-meter-fill.low { background: var(--danger); }
+.score-meter-fill.high { background: var(--success-text); }
+.score-meter-fill.mid { background: var(--warning-text); }
+.score-meter-fill.low { background: var(--danger-text); }
 
 /* Profile header (Lead/Customer 360) */
 .profile-header { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }

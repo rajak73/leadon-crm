@@ -4,6 +4,7 @@ import { ShieldCheck, Search, Building2, User, Lock } from 'lucide-react';
 import { api } from '../lib/api';
 import { Badge, StatCard, EmptyState, Skeleton } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { useToast } from '../lib/toast';
 
 interface OrgRow {
   id: string; name: string; slug: string; status: string; createdAt: string;
@@ -20,6 +21,7 @@ type Tab = 'overview' | 'orgs' | 'users' | 'activity';
 
 export default function AdminPanel() {
   const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
   const [q, setQ] = useState('');
@@ -64,7 +66,7 @@ export default function AdminPanel() {
   async function toggleSuperAdmin(u: UserRow) {
     if (!confirm(`${u.isSuperAdmin ? 'Revoke' : 'Grant'} Super Admin for ${u.email}?`)) return;
     try { await api.patch(`/api/v1/admin/users/${u.id}/super-admin`, { isSuperAdmin: !u.isSuperAdmin }, false); loadUsers(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { toast.error(e.message); }
   }
 
   if (err) return <EmptyState icon={ShieldCheck} title="Couldn't load admin panel" description={err} />;
@@ -190,7 +192,7 @@ export default function AdminPanel() {
                         <td><strong>{u.name || '—'}</strong></td>
                         <td className="subtle">{u.email}</td>
                         <td>{u.organizations}</td>
-                        <td>{u.twoFactorEnabled ? <Lock size={14} style={{ color: 'var(--success)' }} /> : '—'}</td>
+                        <td>{u.twoFactorEnabled ? <Lock size={14} style={{ color: 'var(--success-text)' }} /> : '—'}</td>
                         <td>{u.isSuperAdmin ? <Badge value="active" /> : '—'}</td>
                         <td style={{ textAlign: 'right' }}>
                           <button className="btn sm outline" disabled={u.id === user?.id && u.isSuperAdmin} onClick={() => toggleSuperAdmin(u)}>
