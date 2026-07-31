@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Download, Trophy, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
-import { StatCard, Card, Loading, Empty, money, Badge } from '../components/ui';
+import { StatCard, Card, EmptyState, Skeleton, SkeletonRows, money, Badge } from '../components/ui';
 import { BarChart, DonutChart, LineChart } from '../components/Charts';
 
 interface LeaderRow {
@@ -15,8 +16,8 @@ function Leaderboard() {
     api.get<{ leaderboard: LeaderRow[] }>('/api/v1/reports/leaderboard')
       .then((r) => setRows(r.leaderboard)).catch(() => {}).finally(() => setLoaded(true));
   }, []);
-  if (!loaded) return <Loading />;
-  if (rows.length === 0) return <Empty text="No team members yet." />;
+  if (!loaded) return <SkeletonRows rows={3} />;
+  if (rows.length === 0) return <EmptyState icon={Trophy} title="No team members yet" description="Agent performance will be ranked here once your team has activity." />;
   const medals = ['🥇', '🥈', '🥉'];
   return (
     <table className="table">
@@ -76,22 +77,31 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Reports & Analytics</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Performance and growth trends.</p>
+          <div className="text-display">Reports & Analytics</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Performance and growth trends.</p>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <div className="row" style={{ gap: 4 }}>
+          <div className="segment">
             {RANGES.map((r) => (
-              <button key={r.days} className={`btn sm ${days === r.days ? 'primary' : 'outline'}`} onClick={() => setDays(r.days)}>{r.label}</button>
+              <button key={r.days} className={`segment-btn ${days === r.days ? 'active' : ''}`} onClick={() => setDays(r.days)}>{r.label}</button>
             ))}
           </div>
-          <button className="btn outline" onClick={exportCsv}>⬇ Export CSV</button>
+          <button className="btn outline" onClick={exportCsv}><Download size={14} /> Export CSV</button>
         </div>
       </div>
 
-      {err ? <Empty text={err} /> : !data ? <Loading /> : (
+      {err ? <EmptyState icon={BarChart3} title="Couldn't load reports" description={err} /> : !data ? (
+        <div className="grid grid-4 mt16">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card card-pad stat">
+              <Skeleton width="50%" height={11} />
+              <Skeleton width="40%" height={26} style={{ marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+      ) : (
         <>
           <div className="grid grid-4 mt16">
             <StatCard label={`New Leads (${data.range.days}d)`} value={data.kpis.leadsInRange} />
@@ -111,16 +121,16 @@ export default function Reports() {
 
           <div className="grid grid-2 mt16">
             <Card title="Leads by Status">
-              {data.leadsByStatus.every((d) => d.value === 0) ? <Empty text="No leads yet." /> : <BarChart data={data.leadsByStatus} />}
+              {data.leadsByStatus.every((d) => d.value === 0) ? <EmptyState icon={BarChart3} title="No leads yet" /> : <BarChart data={data.leadsByStatus} />}
             </Card>
             <Card title="Leads by Source">
-              {data.leadsBySource.length === 0 ? <Empty text="No source data yet." /> : <DonutChart data={data.leadsBySource} />}
+              {data.leadsBySource.length === 0 ? <EmptyState icon={BarChart3} title="No source data yet" /> : <DonutChart data={data.leadsBySource} />}
             </Card>
           </div>
 
           <div className="grid grid-2 mt16">
             <Card title="Deal Value (₹)">
-              {data.dealValue.every((d) => d.value === 0) ? <Empty text="No deals yet." /> : <BarChart data={data.dealValue} />}
+              {data.dealValue.every((d) => d.value === 0) ? <EmptyState icon={BarChart3} title="No deals yet" /> : <BarChart data={data.dealValue} />}
             </Card>
             <Card title="Summary">
               <div className="row between mt8"><span className="subtle">All-time leads</span><strong>{data.kpis.totalLeads}</strong></div>
@@ -131,7 +141,7 @@ export default function Reports() {
           </div>
 
           <div className="mt16">
-            <Card title="🏆 Agent Leaderboard">
+            <Card title="Agent Leaderboard" action={<Trophy size={16} style={{ color: 'var(--muted)' }} />}>
               <Leaderboard />
             </Card>
           </div>

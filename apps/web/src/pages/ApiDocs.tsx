@@ -1,3 +1,4 @@
+import { Download, ExternalLink } from 'lucide-react';
 import { Card } from '../components/ui';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -12,14 +13,14 @@ export default function ApiDocs() {
   const specUrl = `${API}/api/docs/openapi.yaml`;
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">API Documentation</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Interactive OpenAPI reference (Swagger UI).</p>
+          <div className="text-display">API Documentation</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Interactive OpenAPI reference (Swagger UI).</p>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <a className="btn outline" href={specUrl} target="_blank" rel="noreferrer">⬇ openapi.yaml</a>
-          <a className="btn primary" href={docsUrl} target="_blank" rel="noreferrer">↗ Open Swagger UI</a>
+          <a className="btn outline" href={specUrl} target="_blank" rel="noreferrer"><Download size={14} /> openapi.yaml</a>
+          <a className="btn primary" href={docsUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open Swagger UI</a>
         </div>
       </div>
 

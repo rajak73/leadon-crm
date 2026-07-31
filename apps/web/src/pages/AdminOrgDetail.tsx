@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Users, Activity as ActivityIcon } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, StatCard, Badge, Loading, Empty } from '../components/ui';
+import { Card, StatCard, Badge, Empty, EmptyState, Skeleton } from '../components/ui';
 
 interface OrgDetail {
   id: string; name: string; slug: string; status: string; createdAt: string; plan?: string | null;
@@ -37,14 +38,30 @@ export default function AdminOrgDetail() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!org) return <Loading />;
+
+  if (!org) {
+    return (
+      <div>
+        <Link to="/admin" className="subtle">← Super Admin</Link>
+        <div className="mt8"><Skeleton width="30%" height={22} /></div>
+        <div className="grid grid-4 mt16">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card card-pad stat">
+              <Skeleton width="50%" height={11} />
+              <Skeleton width="40%" height={26} style={{ marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <Link to="/admin" className="subtle">← Super Admin</Link>
       <div className="row between mt8">
         <div>
-          <div className="h1" style={{ marginBottom: 2 }}>{org.name}</div>
+          <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{org.name}</div>
           <div className="row" style={{ gap: 8 }}>
             <span className="subtle">{org.slug}</span>
             <Badge value={org.status} />
@@ -69,7 +86,7 @@ export default function AdminOrgDetail() {
 
       <div className="grid grid-2 mt16">
         <Card title={`Members (${members.length})`}>
-          {members.length === 0 ? <Empty text="No members." /> : (
+          {members.length === 0 ? <EmptyState icon={Users} title="No members" /> : (
             <table className="table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
               <tbody>
@@ -86,7 +103,7 @@ export default function AdminOrgDetail() {
         </Card>
 
         <Card title="Recent Activity">
-          {activity.length === 0 ? <Empty text="No recent activity." /> : activity.map((a) => (
+          {activity.length === 0 ? <EmptyState icon={ActivityIcon} title="No recent activity" /> : activity.map((a) => (
             <div key={a.id} className="row" style={{ gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <Badge value={a.action.replace(/_/g, ' ')} />
               <div className="subtle" style={{ fontSize: 12 }}>{a.actorEmail || 'system'} · {new Date(a.createdAt).toLocaleString()}</div>

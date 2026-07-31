@@ -40,8 +40,8 @@ export default function Simulator() {
 
   return (
     <div>
-      <div className="h1">Social Lead Simulator</div>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <div className="text-display">Social Lead Simulator</div>
+      <p className="subtle" style={{ marginTop: 4 }}>
         Inject a fake Instagram/WhatsApp message (BRD §11 simulation mode). The system captures the
         lead and runs the interactive name/phone flow (§12). No real messages are sent.
       </p>

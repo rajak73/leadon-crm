@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ShieldCheck, Search, Building2, User, Lock } from 'lucide-react';
 import { api } from '../lib/api';
-import { Badge, StatCard, Loading, Empty } from '../components/ui';
+import { Badge, StatCard, EmptyState, Skeleton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 interface OrgRow {
@@ -66,7 +67,7 @@ export default function AdminPanel() {
     catch (e: any) { alert(e.message); }
   }
 
-  if (err) return <Empty text={err} />;
+  if (err) return <EmptyState icon={ShieldCheck} title="Couldn't load admin panel" description={err} />;
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
@@ -77,30 +78,37 @@ export default function AdminPanel() {
 
   return (
     <div>
-      <div className="h1">🛡️ Super Admin</div>
-      <p className="subtle" style={{ marginTop: 0 }}>Platform control panel. Aggregate, non-secret data only — no impersonation (BRD §20).</p>
+      <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+        <ShieldCheck size={22} style={{ color: 'var(--primary)' }} />
+        <div className="text-display">Super Admin</div>
+      </div>
+      <p className="subtle" style={{ marginTop: 4 }}>Platform control panel. Aggregate, non-secret data only — no impersonation (BRD §20).</p>
 
       <div style={{ position: 'relative', maxWidth: 480, marginTop: 12 }}>
-        <input
-          className="input"
-          placeholder="🔎 Search organizations & users across the platform…"
-          value={q}
-          onChange={(e) => search(e.target.value)}
-        />
+        <div style={{ position: 'relative' }}>
+          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
+          <input
+            className="input"
+            style={{ paddingLeft: 34 }}
+            placeholder="Search organizations & users across the platform…"
+            value={q}
+            onChange={(e) => search(e.target.value)}
+          />
+        </div>
         {results && (results.organizations.length > 0 || results.users.length > 0) && (
           <div className="card" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20, padding: 0, maxHeight: 340, overflowY: 'auto' }}>
-            {results.organizations.length > 0 && <div className="subtle" style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700 }}>ORGANIZATIONS</div>}
+            {results.organizations.length > 0 && <div className="text-overline" style={{ padding: '8px 12px' }}>Organizations</div>}
             {results.organizations.map((o) => (
               <div key={o.id} onClick={() => { setResults(null); setQ(''); navigate(`/admin/organizations/${o.id}`); }}
-                style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)' }}>
-                🏢 <strong>{o.name}</strong> <span className="subtle">· {o.slug}</span> <Badge value={o.status} />
+                className="row" style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8 }}>
+                <Building2 size={14} style={{ color: 'var(--muted)' }} /> <strong>{o.name}</strong> <span className="subtle">· {o.slug}</span> <Badge value={o.status} />
               </div>
             ))}
-            {results.users.length > 0 && <div className="subtle" style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700 }}>USERS</div>}
+            {results.users.length > 0 && <div className="text-overline" style={{ padding: '8px 12px' }}>Users</div>}
             {results.users.map((u) => (
               <div key={u.id} onClick={() => { setResults(null); setQ(''); setTab('users'); }}
-                style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)' }}>
-                👤 <strong>{u.name || u.email}</strong> <span className="subtle">· {u.email}</span>{u.isSuperAdmin && <span className="badge gray" style={{ marginLeft: 6 }}>super</span>}
+                className="row" style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid var(--border)', gap: 8 }}>
+                <User size={14} style={{ color: 'var(--muted)' }} /> <strong>{u.name || u.email}</strong> <span className="subtle">· {u.email}</span>{u.isSuperAdmin && <span className="badge gray" style={{ marginLeft: 6 }}>super</span>}
               </div>
             ))}
           </div>
@@ -112,13 +120,22 @@ export default function AdminPanel() {
         )}
       </div>
 
-      <div className="row" style={{ gap: 6, margin: '16px 0' }}>
+      <div className="segment" style={{ margin: '16px 0' }}>
         {TABS.map((t) => (
-          <button key={t.key} className={`btn sm ${tab === t.key ? 'primary' : 'outline'}`} onClick={() => setTab(t.key)}>{t.label}</button>
+          <button key={t.key} className={`segment-btn ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>
         ))}
       </div>
 
-      {loading ? <Loading /> : (
+      {loading ? (
+        <div className="grid grid-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card card-pad stat">
+              <Skeleton width="50%" height={11} />
+              <Skeleton width="40%" height={26} style={{ marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+      ) : (
         <>
           {tab === 'overview' && metrics && (
             <>
@@ -139,7 +156,7 @@ export default function AdminPanel() {
 
           {tab === 'orgs' && (
             <div className="card card-pad">
-              {orgs.length === 0 ? <Empty text="No organizations." /> : (
+              {orgs.length === 0 ? <EmptyState icon={Building2} title="No organizations" /> : (
                 <table className="table">
                   <thead><tr><th>Organization</th><th>Status</th><th>Members</th><th>Leads</th><th>Deals</th><th>Messages</th><th></th></tr></thead>
                   <tbody>
@@ -164,7 +181,7 @@ export default function AdminPanel() {
 
           {tab === 'users' && (
             <div className="card card-pad">
-              {users.length === 0 ? <Empty text="No users." /> : (
+              {users.length === 0 ? <EmptyState icon={User} title="No users" /> : (
                 <table className="table">
                   <thead><tr><th>Name</th><th>Email</th><th>Orgs</th><th>2FA</th><th>Super Admin</th><th></th></tr></thead>
                   <tbody>
@@ -173,7 +190,7 @@ export default function AdminPanel() {
                         <td><strong>{u.name || '—'}</strong></td>
                         <td className="subtle">{u.email}</td>
                         <td>{u.organizations}</td>
-                        <td>{u.twoFactorEnabled ? '🔒' : '—'}</td>
+                        <td>{u.twoFactorEnabled ? <Lock size={14} style={{ color: 'var(--success)' }} /> : '—'}</td>
                         <td>{u.isSuperAdmin ? <Badge value="active" /> : '—'}</td>
                         <td style={{ textAlign: 'right' }}>
                           <button className="btn sm outline" disabled={u.id === user?.id && u.isSuperAdmin} onClick={() => toggleSuperAdmin(u)}>
@@ -190,7 +207,7 @@ export default function AdminPanel() {
 
           {tab === 'activity' && (
             <div className="card card-pad">
-              {activity.length === 0 ? <Empty text="No recent activity." /> : (
+              {activity.length === 0 ? <EmptyState icon={ShieldCheck} title="No recent activity" /> : (
                 <table className="table">
                   <thead><tr><th>When</th><th>Action</th><th>Actor</th><th>Org</th></tr></thead>
                   <tbody>

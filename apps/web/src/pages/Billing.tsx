@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Loading, Empty, money } from '../components/ui';
+import { Card, Empty, Skeleton, money } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 interface PlanDef {
@@ -46,12 +47,25 @@ export default function Billing() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!sub) return <Loading />;
+
+  if (!sub) {
+    return (
+      <div>
+        <div className="text-display">Billing & Plan</div>
+        <div className="mt16 card card-pad">
+          <Skeleton width="30%" height={13} style={{ marginBottom: 10 }} />
+          <div className="grid grid-3">
+            <Skeleton height={40} /><Skeleton height={40} /><Skeleton height={40} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="h1">Billing & Plan</div>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <div className="text-display">Billing & Plan</div>
+      <p className="subtle" style={{ marginTop: 4 }}>
         Current plan: <strong>{sub.plan}</strong> · Status {sub.status} · Mode {sub.mode}
       </p>
 
@@ -77,9 +91,11 @@ export default function Billing() {
               <div className="amt">{p.priceMonthly < 0 ? "Let's talk" : p.priceMonthly === 0 ? 'Free' : money(p.priceMonthly)}</div>
               <div className="subtle">{p.priceMonthly > 0 ? 'per month' : ''}</div>
               <div className="mt16" style={{ textAlign: 'left' }}>
-                <div className="mt8">✓ {lim(p.limits.leads)} leads</div>
-                <div className="mt8">✓ {lim(p.limits.members)} members</div>
-                {p.features.map((f) => <div key={f} className="mt8">✓ {f}</div>)}
+                <div className="row mt8" style={{ gap: 8 }}><Check size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} /> {lim(p.limits.leads)} leads</div>
+                <div className="row mt8" style={{ gap: 8 }}><Check size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} /> {lim(p.limits.members)} members</div>
+                {p.features.map((f) => (
+                  <div key={f} className="row mt8" style={{ gap: 8 }}><Check size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} /> {f}</div>
+                ))}
               </div>
               <button
                 className={`btn ${current ? 'outline' : 'primary'} block mt16`}
