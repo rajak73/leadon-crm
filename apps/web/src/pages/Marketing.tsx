@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Target, Bot, UserCircle2, MessageCircle, Zap, Clock, Check } from 'lucide-react';
+import { Target, Bot, UserCircle2, MessageCircle, Zap, Clock, Check, Sparkles, TrendingUp } from 'lucide-react';
 
 const features = [
   { ic: MessageCircle, title: 'Instagram Inbox', desc: 'Every DM and comment on your Instagram Business account, in one clean inbox.' },
@@ -25,19 +25,64 @@ export default function Marketing() {
         </nav>
       </div>
 
-      <header className="mk-hero">
-        <span className="pill">Instagram DMs & Comments, Automated</span>
-        <h1>Turn every Instagram message into a customer.</h1>
-        <p>
-          LeadOS connects to your Instagram Business account, automatically captures leads from
-          every DM and comment, and replies for you — so no customer waits, and nothing falls
-          through the cracks.
-        </p>
-        <div className="row" style={{ justifyContent: 'center' }}>
-          <Link to="/signup" className="btn primary">Start free →</Link>
-          <a href="#features" className="btn outline">See features</a>
+      <div className="mk-hero-wrap">
+      <div className="mk-hero-blob mk-hero-blob-1" />
+      <div className="mk-hero-blob mk-hero-blob-2" />
+
+      <header className="mk-hero-split">
+        <div className="mk-hero-copy">
+          <span className="pill">Instagram DMs & Comments, Automated</span>
+          <h1>Turn every Instagram message into a customer.</h1>
+          <p>
+            LeadOS connects to your Instagram Business account, automatically captures leads from
+            every DM and comment, and replies for you — so no customer waits, and nothing falls
+            through the cracks.
+          </p>
+          <div className="row">
+            <Link to="/signup" className="btn primary">Start free →</Link>
+            <a href="#features" className="btn outline">See features</a>
+          </div>
+          <div className="row mk-hero-trust">
+            <div className="row" style={{ gap: 6 }}><Check size={14} style={{ color: 'var(--success-text)' }} /> No credit card required</div>
+            <div className="row" style={{ gap: 6 }}><Check size={14} style={{ color: 'var(--success-text)' }} /> Set up in under a minute</div>
+          </div>
+        </div>
+
+        <div className="mk-hero-visual">
+          <div className="card mk-mockup">
+            <div className="row between" style={{ marginBottom: 14 }}>
+              <div className="row" style={{ gap: 8 }}>
+                <div className="ig-status-ic"><MessageCircle size={16} /></div>
+                <span className="text-title">Instagram Inbox</span>
+              </div>
+              <span className="badge active">Live</span>
+            </div>
+            <div className="msg in">Hi! Do you have this in size M?</div>
+            <div className="msg out">Yes! Could you share your name and number so we can confirm stock for you?</div>
+            <div className="msg in">Priya, 98765xxxxx</div>
+            <div className="msg out">Thanks Priya — reserved for you. Our team will DM shipping details shortly 🎉</div>
+          </div>
+          <div className="card card-pad mk-float mk-float-1">
+            <div className="row" style={{ gap: 10 }}>
+              <div className="stat-ic" style={{ background: 'var(--success-50)', color: 'var(--success-text)' }}><TrendingUp size={16} /></div>
+              <div>
+                <div className="text-h3" style={{ margin: 0 }}>+47 leads</div>
+                <div className="text-caption">captured today</div>
+              </div>
+            </div>
+          </div>
+          <div className="card card-pad mk-float mk-float-2">
+            <div className="row" style={{ gap: 10 }}>
+              <div className="stat-ic" style={{ background: 'var(--primary-50)', color: 'var(--primary-600)' }}><Sparkles size={16} /></div>
+              <div>
+                <div className="text-h3" style={{ margin: 0 }}>Auto-replied</div>
+                <div className="text-caption">in 2 seconds</div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+      </div>
 
       <section id="features" className="mk-section">
         <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Everything your Instagram inbox needs</div>
