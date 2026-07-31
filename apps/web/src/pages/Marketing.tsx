@@ -1,5 +1,71 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Bot, UserCircle2, MessageCircle, Zap, Clock, Check, Sparkles, TrendingUp } from 'lucide-react';
+import { Target, Bot, UserCircle2, MessageCircle, Zap, Clock, Check, Sparkles, TrendingUp, X } from 'lucide-react';
+
+const DEMO_SCRIPT = [
+  { dir: 'in', text: 'Hi! Do you have this in size M?' },
+  { dir: 'out', text: 'Yes! Could you share your name and number so we can confirm stock for you?' },
+  { dir: 'in', text: 'Priya, 98765xxxxx' },
+  { dir: 'out', text: 'Thanks Priya — reserved for you 🎉 Our team will DM shipping details shortly.' },
+] as const;
+
+/** Auto-playing, looping chat demo — gives the hero a "video" feel without
+ * needing an actual video asset. Typing dots → message appears → repeat,
+ * then a pause and reset. Respects prefers-reduced-motion by freezing on
+ * the final state instead of looping. */
+function AnimatedInboxDemo() {
+  const [step, setStep] = useState(0); // how many messages are shown
+  const [typing, setTyping] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setStep(DEMO_SCRIPT.length);
+      return;
+    }
+    let cancelled = false;
+    let t: ReturnType<typeof setTimeout>;
+
+    async function run() {
+      while (!cancelled) {
+        setStep(0);
+        for (let i = 0; i < DEMO_SCRIPT.length; i++) {
+          await new Promise((r) => { t = setTimeout(r, i === 0 ? 500 : 900); });
+          if (cancelled) return;
+          setTyping(true);
+          await new Promise((r) => { t = setTimeout(r, 700); });
+          if (cancelled) return;
+          setTyping(false);
+          setStep(i + 1);
+        }
+        await new Promise((r) => { t = setTimeout(r, 2400); });
+      }
+    }
+    run();
+    return () => { cancelled = true; clearTimeout(t); };
+  }, []);
+
+  return (
+    <div className="card mk-mockup">
+      <div className="row between" style={{ marginBottom: 14 }}>
+        <div className="row" style={{ gap: 8 }}>
+          <div className="ig-status-ic"><MessageCircle size={16} /></div>
+          <span className="text-title">Instagram Inbox</span>
+        </div>
+        <span className="badge active">Live</span>
+      </div>
+      <div className="mk-demo-thread">
+        {DEMO_SCRIPT.slice(0, step).map((m, i) => (
+          <div key={i} className={`msg ${m.dir} mk-demo-msg`}>{m.text}</div>
+        ))}
+        {typing && (
+          <div className="msg out mk-typing">
+            <span /><span /><span />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const features = [
   { ic: MessageCircle, title: 'Instagram Inbox', desc: 'Every DM and comment on your Instagram Business account, in one clean inbox.' },
@@ -49,19 +115,7 @@ export default function Marketing() {
         </div>
 
         <div className="mk-hero-visual">
-          <div className="card mk-mockup">
-            <div className="row between" style={{ marginBottom: 14 }}>
-              <div className="row" style={{ gap: 8 }}>
-                <div className="ig-status-ic"><MessageCircle size={16} /></div>
-                <span className="text-title">Instagram Inbox</span>
-              </div>
-              <span className="badge active">Live</span>
-            </div>
-            <div className="msg in">Hi! Do you have this in size M?</div>
-            <div className="msg out">Yes! Could you share your name and number so we can confirm stock for you?</div>
-            <div className="msg in">Priya, 98765xxxxx</div>
-            <div className="msg out">Thanks Priya — reserved for you. Our team will DM shipping details shortly 🎉</div>
-          </div>
+          <AnimatedInboxDemo />
           <div className="card card-pad mk-float mk-float-1">
             <div className="row" style={{ gap: 10 }}>
               <div className="stat-ic" style={{ background: 'var(--success-50)', color: 'var(--success-text)' }}><TrendingUp size={16} /></div>
@@ -98,24 +152,48 @@ export default function Marketing() {
       </section>
 
       <section className="mk-section">
-        <div className="card card-pad" style={{ background: 'linear-gradient(135deg,#eef2ff,#faf5ff)' }}>
-          <div className="grid grid-2" style={{ alignItems: 'center' }}>
-            <div>
-              <span className="pill">Instagram lead capture</span>
-              <div className="h1">From DM to customer — automatically</div>
-              <p className="subtle">
-                A new Instagram message becomes a lead instantly. LeadOS asks for the customer's
-                name and phone number, captures the details, and replies right away — for real, on
-                your connected Instagram account.
-              </p>
-            </div>
-            <div className="card card-pad">
-              <div className="msg in">Hi, I want pricing</div>
-              <div className="msg out">Thanks for reaching out! Could you share your name and phone number so our team can help you faster?</div>
-              <div className="msg in">My name is Rahul, phone 9876543210</div>
-              <div className="msg out">Thanks Rahul. Our team will contact you shortly.</div>
-            </div>
+        <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Before vs. after LeadOS</div>
+        <div className="grid grid-2 mk-baf">
+          <div className="card card-pad mk-baf-card mk-baf-before">
+            <span className="text-overline">Before LeadOS</span>
+            <div className="text-h2 mt8" style={{ marginBottom: 0 }}>Every DM, on you</div>
+            {[
+              'Typing the same "how much?" reply for the 50th time',
+              'Hot leads buried under a pile of comments',
+              'Customers waiting hours for a reply after hours',
+              'No record of who said what, or who followed up',
+            ].map((t) => (
+              <div key={t} className="row mt16" style={{ gap: 10, alignItems: 'flex-start' }}>
+                <X size={16} style={{ color: 'var(--danger-text)', flexShrink: 0, marginTop: 2 }} />
+                <span>{t}</span>
+              </div>
+            ))}
           </div>
+          <div className="card card-pad mk-baf-card mk-baf-after">
+            <span className="text-overline" style={{ color: 'rgba(255,255,255,.75)' }}>After LeadOS</span>
+            <div className="text-h2 mt8" style={{ marginBottom: 0, color: '#fff' }}>Every DM, handled</div>
+            {[
+              'Common questions answered instantly, automatically',
+              'Every lead captured with name, number and full history',
+              'Replies go out in seconds — day or night',
+              'One inbox, one timeline, nothing falls through',
+            ].map((t) => (
+              <div key={t} className="row mt16" style={{ gap: 10, alignItems: 'flex-start' }}>
+                <Check size={16} style={{ color: '#fff', flexShrink: 0, marginTop: 2 }} />
+                <span>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mk-block">
+        <div className="mk-section" style={{ textAlign: 'center' }}>
+          <div className="text-display" style={{ color: '#fff', marginBottom: 12 }}>Less scrolling. More selling.</div>
+          <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 17, maxWidth: 560, margin: '0 auto' }}>
+            LeadOS runs your Instagram inbox while you run your business — every message answered,
+            every lead captured, every night and weekend covered.
+          </p>
         </div>
       </section>
 
