@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { Card } from './ui';
+import { Card, PasswordInput } from './ui';
 
 export function TwoFactorSettings() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
@@ -61,7 +61,7 @@ export function TwoFactorSettings() {
           <p>✅ 2FA is <strong>enabled</strong> on your account.</p>
           <div className="field" style={{ maxWidth: 320 }}>
             <label>Enter your password to disable</label>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {err && <div className="error">{err}</div>}
           <button className="btn outline" onClick={disable} disabled={busy || !password}>Disable 2FA</button>

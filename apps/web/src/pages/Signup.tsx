@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { validatePassword, PASSWORD_RULE } from '@leados/shared';
 import { GoogleButton } from '../components/GoogleButton';
+import { PasswordInput } from '../components/ui';
 
 export default function Signup() {
   const { signup } = useAuth();
@@ -39,7 +40,7 @@ export default function Signup() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="brand" style={{ fontSize: 24, textAlign: 'center' }}>LeadOS</div>
+        <div className="brand" style={{ fontSize: 22, textAlign: 'center' }}><span className="logo-dot">L</span> LeadOS</div>
         <div className="card card-pad mt16">
           <div className="h1">Create your workspace</div>
           <p className="subtle" style={{ marginTop: 0 }}>Start capturing and converting leads today.</p>
@@ -64,7 +65,7 @@ export default function Signup() {
             </div>
             <div className="field">
               <label>Password</label>
-              <input className="input" aria-label="Password" type="password" value={form.password} onChange={(e) => set('password', e.target.value)} required />
+              <PasswordInput aria-label="Password" value={form.password} onChange={(e) => set('password', e.target.value)} required />
               <div className="hint">{PASSWORD_RULE.hint}</div>
             </div>
             {error && <div className="error">{error}</div>}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { ApiError } from '../lib/api';
 import { GoogleButton } from '../components/GoogleButton';
+import { PasswordInput } from '../components/ui';
 
 export default function Login() {
   const { login, verify2fa } = useAuth();
@@ -51,7 +52,7 @@ export default function Login() {
     return (
       <div className="auth-wrap">
         <div className="auth-card">
-          <div className="brand" style={{ fontSize: 24, textAlign: 'center' }}>LeadOS</div>
+          <div className="brand" style={{ fontSize: 22, textAlign: 'center' }}><span className="logo-dot">L</span> LeadOS</div>
           <div className="card card-pad mt16">
             <div className="h1">Two-factor authentication</div>
             <p className="subtle" style={{ marginTop: 0 }}>
@@ -80,7 +81,7 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <div className="brand" style={{ fontSize: 24, textAlign: 'center' }}>LeadOS</div>
+        <div className="brand" style={{ fontSize: 22, textAlign: 'center' }}><span className="logo-dot">L</span> LeadOS</div>
         <div className="card card-pad mt16">
           <div className="h1">Welcome back</div>
           <p className="subtle" style={{ marginTop: 0 }}>Sign in to your workspace.</p>
@@ -91,7 +92,7 @@ export default function Login() {
             </div>
             <div className="field">
               <label>Password</label>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             {error && <div className="error">{error}</div>}
             <button className="btn primary block mt8" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
