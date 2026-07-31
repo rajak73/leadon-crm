@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Download } from 'lucide-react';
 import { api } from '../lib/api';
-import { Loading, Empty, money, Modal } from '../components/ui';
+import { Empty, Skeleton, money, Modal } from '../components/ui';
 
 interface Deal { id: string; title: string; value: number; owner?: { firstName: string } | null; }
 interface Column { stage: { id: string; key: string; name: string; probability: number }; deals: Deal[]; totalValue: number; count: number; }
@@ -24,21 +25,38 @@ export default function Pipeline() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!data) return <Loading />;
+
+  if (!data) {
+    return (
+      <div>
+        <div className="text-display">Pipeline</div>
+        <p className="subtle" style={{ marginTop: 4 }}>Loading your deals…</p>
+        <div className="kanban mt16">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="kanban-col">
+              <Skeleton width="60%" height={13} style={{ marginBottom: 12 }} />
+              <div className="deal-card"><Skeleton width="80%" height={13} style={{ marginBottom: 8 }} /><Skeleton width="40%" height={12} /></div>
+              <div className="deal-card"><Skeleton width="70%" height={13} style={{ marginBottom: 8 }} /><Skeleton width="40%" height={12} /></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Pipeline</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Total open value: {money(data.totalPipelineValue)}</p>
+          <div className="text-display">Pipeline</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Total open value: {money(data.totalPipelineValue)}</p>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <button className="btn outline" onClick={() => {
             const base = import.meta.env.VITE_API_URL || '';
             fetch(`${base}/api/v1/deals/export.csv`, { headers: { Authorization: `Bearer ${localStorage.getItem('leados_token')}`, 'X-Org-Id': localStorage.getItem('leados_org') || '' } })
               .then((r) => r.blob()).then((blob) => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'deals.csv'; a.click(); URL.revokeObjectURL(url); });
-          }}>⬇ Export CSV</button>
+          }}><Download size={14} /> Export CSV</button>
           <button className="btn primary" onClick={() => setShowNew(true)}>+ New Deal</button>
         </div>
       </div>
@@ -50,7 +68,7 @@ export default function Pipeline() {
               <span>{col.stage.name} <span className="subtle">({col.count})</span></span>
               <span className="subtle">{money(col.totalValue)}</span>
             </h3>
-            {col.deals.length === 0 ? <div className="subtle" style={{ padding: 8, fontSize: 13 }}>No deals</div> :
+            {col.deals.length === 0 ? <div className="text-small" style={{ padding: 8 }}>No deals</div> :
               col.deals.map((d) => (
                 <div key={d.id} className="deal-card">
                   <Link to={`/app/deals/${d.id}`} className="title" style={{ color: 'var(--primary)', display: 'block' }}>{d.title}</Link>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Download, Upload, Users } from 'lucide-react';
 import { api } from '../lib/api';
-import { Loading, Empty, Modal } from '../components/ui';
+import { EmptyState, Skeleton, Modal } from '../components/ui';
 
 interface Contact {
   id: string;
@@ -77,15 +78,15 @@ export default function Contacts() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Contacts</div>
-          <p className="subtle" style={{ marginTop: 0 }}>People and businesses you work with.</p>
+          <div className="text-display">Contacts</div>
+          <p className="subtle" style={{ marginTop: 4 }}>People and businesses you work with.</p>
         </div>
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn outline" onClick={exportCsv}>⬇ Export CSV</button>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn outline" onClick={exportCsv}><Download size={14} /> Export CSV</button>
           <label className="btn outline" style={{ cursor: 'pointer' }}>
-            ⬆ Import CSV
+            <Upload size={14} /> Import CSV
             <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importCsv} />
           </label>
           <button className="btn primary" onClick={() => setShowNew(true)}>+ New Contact</button>
@@ -102,7 +103,28 @@ export default function Contacts() {
             </div>
           </div>
         )}
-        {loading ? <Loading /> : contacts.length === 0 ? <Empty text="No contacts yet." /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td style={{ width: 32 }}><Skeleton width={14} height={14} radius={4} /></td>
+                  <td><Skeleton width="50%" height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width="70%" height={13} /></td>
+                  <td />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : contacts.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No contacts yet"
+            description="Contacts you add manually or import from a CSV will show up here."
+            action={<button className="btn primary sm" onClick={() => setShowNew(true)}>+ New Contact</button>}
+          />
+        ) : (
           <table className="table">
             <thead><tr>
               <th style={{ width: 32 }}><input type="checkbox" checked={selected.size === contacts.length && contacts.length > 0} onChange={toggleAll} /></th>
