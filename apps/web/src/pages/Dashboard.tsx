@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  MessageCircle, AtSign, Target, Timer, Inbox as InboxIcon, Zap, Camera, Activity,
+} from 'lucide-react';
 import { api } from '../lib/api';
-import { StatCard, Card, Badge, Loading, Empty } from '../components/ui';
+import { StatCard, Card, Badge, Empty, EmptyState, Skeleton, SkeletonRows } from '../components/ui';
 
 interface DashboardData {
   connection: { connected: boolean; displayName?: string | null; webhookSubscribed?: boolean; tokenExpiresAt?: string | null };
@@ -20,50 +23,89 @@ export default function Dashboard() {
   }, []);
 
   if (err) return <Empty text={err} />;
-  if (!data) return <Loading />;
+
+  if (!data) {
+    return (
+      <div>
+        <div className="text-display">Dashboard</div>
+        <p className="subtle" style={{ marginTop: 4 }}>Your Instagram inbox at a glance.</p>
+        <div className="grid grid-4 mt24">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card card-pad stat">
+              <Skeleton width="50%" height={11} />
+              <Skeleton width="40%" height={26} style={{ marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-2 mt16">
+          <Card title="Recent conversations"><SkeletonRows rows={4} /></Card>
+          <Card title="Webhook / API health"><SkeletonRows rows={2} /></Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="h1">Dashboard</div>
-      <p className="subtle" style={{ marginTop: 0 }}>Your Instagram inbox at a glance.</p>
+      <div className="row between" style={{ alignItems: 'flex-start' }}>
+        <div>
+          <div className="text-display">Dashboard</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Your Instagram inbox at a glance.</p>
+        </div>
+      </div>
 
-      <div className="mt16">
-        <Card title="Instagram connection">
+      <div className="mt24">
+        <div className={`card card-pad row between ${data.connection.connected ? 'ig-status-ok' : ''}`}>
           {data.connection.connected ? (
-            <div className="row between">
-              <div>
-                <Badge value="active" /> Connected as <strong>@{data.connection.displayName}</strong>
-                <div className="hint mt8">
-                  Webhook: {data.connection.webhookSubscribed ? 'subscribed' : 'not subscribed'}
-                  {data.connection.tokenExpiresAt && ` · Token expires ${new Date(data.connection.tokenExpiresAt).toLocaleDateString()}`}
+            <>
+              <div className="row" style={{ gap: 12 }}>
+                <div className="ig-status-ic"><Camera size={18} /></div>
+                <div>
+                  <div className="text-title">Connected as @{data.connection.displayName}</div>
+                  <div className="text-small mt8" style={{ marginTop: 2 }}>
+                    Webhook {data.connection.webhookSubscribed ? 'subscribed' : 'not subscribed'}
+                    {data.connection.tokenExpiresAt && ` · Token expires ${new Date(data.connection.tokenExpiresAt).toLocaleDateString()}`}
+                  </div>
                 </div>
               </div>
-            </div>
+              <Badge value="active" />
+            </>
           ) : (
-            <div className="row between">
-              <span>No Instagram account connected yet.</span>
+            <>
+              <div className="row" style={{ gap: 12 }}>
+                <div className="ig-status-ic"><Camera size={18} /></div>
+                <span className="text-title">No Instagram account connected yet</span>
+              </div>
               <Link className="btn primary sm" to="/app/integrations">Connect Instagram</Link>
-            </div>
+            </>
           )}
-        </Card>
+        </div>
       </div>
 
-      <div className="grid grid-4 mt16">
-        <StatCard label="Today's messages" value={data.counts.todayMessages} />
-        <StatCard label="Today's comments" value={data.counts.todayComments} />
-        <StatCard label="Today's leads" value={data.counts.todayLeads} />
-        <StatCard label="Avg. response time" value={data.avgResponseMinutes !== null ? `${data.avgResponseMinutes}m` : '—'} />
-      </div>
-      <div className="grid grid-3 mt16">
-        <StatCard label="Pending replies" value={data.counts.pendingReplies} />
-        <StatCard label="Unread conversations" value={data.counts.unreadConversations} />
-        <StatCard label="Automation triggers today" value={data.counts.automationTriggerCount} />
+      <div className="text-overline mt24" style={{ marginBottom: 10 }}>Today</div>
+      <div className="grid grid-4">
+        <StatCard icon={MessageCircle} label="Messages" value={data.counts.todayMessages} />
+        <StatCard icon={AtSign} label="Comments" value={data.counts.todayComments} />
+        <StatCard icon={Target} label="New leads" value={data.counts.todayLeads} />
+        <StatCard icon={Timer} label="Avg. response time" value={data.avgResponseMinutes !== null ? `${data.avgResponseMinutes}m` : '—'} />
       </div>
 
-      <div className="grid grid-2 mt16">
-        <Card title="Recent conversations">
+      <div className="text-overline mt24" style={{ marginBottom: 10 }}>Needs attention</div>
+      <div className="grid grid-3">
+        <StatCard icon={InboxIcon} label="Pending replies" value={data.counts.pendingReplies} />
+        <StatCard icon={MessageCircle} label="Unread conversations" value={data.counts.unreadConversations} />
+        <StatCard icon={Zap} label="Automation triggers today" value={data.counts.automationTriggerCount} />
+      </div>
+
+      <div className="grid grid-2 mt24">
+        <Card title="Recent conversations" action={<Link className="btn sm outline" to="/app/inbox">Open Inbox</Link>}>
           {data.recentConversations.length === 0 ? (
-            <Empty text="No conversations yet." />
+            <EmptyState
+              icon={InboxIcon}
+              title="No conversations yet"
+              description="Once someone DMs or comments on your connected Instagram account, it'll show up here."
+              action={<Link className="btn primary sm" to="/app/integrations">Check connection</Link>}
+            />
           ) : (
             <table className="table">
               <tbody>
@@ -82,7 +124,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Webhook / API health">
+        <Card title="Webhook / API health" action={<Activity size={16} style={{ color: 'var(--muted)' }} />}>
           <div className="hint">
             Last event: {data.webhookHealth.lastEventAt ? new Date(data.webhookHealth.lastEventAt).toLocaleString() : 'none yet'}
             {data.webhookHealth.lastEventStatus && ` (${data.webhookHealth.lastEventStatus})`}

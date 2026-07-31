@@ -48,7 +48,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const sidebar = (
     <>
-      <div className="brand">LeadOS</div>
+      <div className="brand"><span className="logo-dot">L</span> LeadOS</div>
       {nav.map((n) => (
         <NavLink
           key={n.to}
