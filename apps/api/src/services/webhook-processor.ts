@@ -16,6 +16,8 @@ import { runCapture } from './capture.js';
 import { sendOutbound } from './messaging.js';
 import { createNotification } from './notifications.js';
 import { matchAutoReplyRule } from './autoReply.js';
+import { generateAutoReply } from './ai/index.js';
+import { CAPTURE_STATE } from './capture.js';
 import { parseJson, logActivity } from '../lib/helpers.js';
 
 export interface InboundPayload {
@@ -286,7 +288,20 @@ async function processInboundMessage(payload: InboundPayload, isSimulation: bool
       link: '/app/inbox',
     });
   } else {
-    const replyBody = rule?.action === 'REPLY' && rule.replyTemplate ? rule.replyTemplate : capture.reply;
+    let replyBody = rule?.action === 'REPLY' && rule.replyTemplate ? rule.replyTemplate : capture.reply;
+    // No keyword rule matched — use AI to answer what the customer actually
+    // asked instead of the generic name/phone-capture message (falls back
+    // to that same generic message when AI is disabled/unavailable).
+    if (!(rule?.action === 'REPLY' && rule.replyTemplate)) {
+      const ai = await generateAutoReply({
+        messageText: text,
+        leadName: capture.nextName,
+        needsName: capture.nextState === CAPTURE_STATE.NEEDS_NAME_PHONE || capture.nextState === CAPTURE_STATE.NEEDS_NAME,
+        needsPhone: capture.nextState === CAPTURE_STATE.NEEDS_NAME_PHONE || capture.nextState === CAPTURE_STATE.NEEDS_PHONE,
+        fallbackReply: capture.reply,
+      });
+      replyBody = ai.reply;
+    }
     const send = await sendOutbound({
       organizationId,
       conversationId: conversation.id,

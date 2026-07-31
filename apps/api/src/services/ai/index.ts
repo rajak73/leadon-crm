@@ -88,6 +88,57 @@ export async function suggestReplies(ctx: {
   return { suggestions: ruleReplySuggestions(ctx), method: 'rules' };
 }
 
+export interface AutoReplyResult {
+  reply: string;
+  method: 'ai' | 'rules';
+}
+
+/**
+ * Generates the actual automatic bot reply sent back to a customer's DM
+ * (when no keyword Auto Reply Rule matched). Unlike suggestReplies (3
+ * options for a human agent to pick from), this returns one definitive,
+ * contextual reply meant to be sent immediately and unattended — so it
+ * must never invent specifics (pricing, policies) it doesn't actually know.
+ * Falls back to the deterministic capture-flow reply when AI is disabled.
+ */
+export async function generateAutoReply(ctx: {
+  messageText: string;
+  leadName?: string | null;
+  needsName: boolean;
+  needsPhone: boolean;
+  fallbackReply: string;
+}): Promise<AutoReplyResult> {
+  const provider = getProvider();
+  if (isAiEnabled() && provider) {
+    try {
+      const askFor = [ctx.needsName && 'their name', ctx.needsPhone && 'a phone number'].filter(Boolean).join(' and ');
+      const out = await provider.complete(
+        [
+          {
+            role: 'system',
+            content:
+              'You are a friendly, concise Instagram business assistant replying automatically to a customer DM. ' +
+              'Reply helpfully in 1-2 short sentences to what they actually said. ' +
+              'Never invent specifics you do not know (prices, stock, policies, dates) — keep those general and say the team will follow up. ' +
+              (askFor ? `End by warmly asking for ${askFor} so the team can help them faster. ` : '') +
+              'Respond with ONLY the reply text — no quotes, no JSON, no preamble.',
+          },
+          {
+            role: 'user',
+            content: `Customer name so far: ${ctx.leadName ?? 'unknown'}. Their message: "${ctx.messageText}"`,
+          },
+        ],
+        { temperature: 0.5, maxTokens: 150 }
+      );
+      const text = out?.trim();
+      if (text) return { reply: text, method: 'ai' };
+    } catch {
+      /* fall through */
+    }
+  }
+  return { reply: ctx.fallbackReply, method: 'rules' };
+}
+
 export interface SummaryResult {
   summary: string;
   method: 'ai' | 'rules';
