@@ -77,13 +77,13 @@ export function KeyboardShortcuts() {
   return (
     <>
       {gPending && (
-        <div style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 70, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
+        <div className="toast-in" style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 70, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
           <strong>g</strong> then a key… (d/r/l/c/p/t/i)
         </div>
       )}
       {showHelp && (
-        <div onClick={() => setShowHelp(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 70, display: 'grid', placeItems: 'center', padding: 16 }}>
-          <div className="card card-pad" style={{ width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+        <div onClick={() => setShowHelp(false)} className="overlay-in" style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 70, display: 'grid', placeItems: 'center', padding: 16 }}>
+          <div className="card card-pad modal-in" style={{ width: '100%', maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
             <div className="row between" style={{ marginBottom: 12 }}>
               <div className="h2" style={{ margin: 0 }}>Keyboard Shortcuts</div>
               <button className="btn sm" onClick={() => setShowHelp(false)} aria-label="Close"><X size={16} /></button>

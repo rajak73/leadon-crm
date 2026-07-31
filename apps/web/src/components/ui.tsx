@@ -159,9 +159,10 @@ export function Modal({ title, children, onClose }: { title: string; children: R
   return (
     <div
       onClick={onClose}
+      className="overlay-in"
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}
     >
-      <div className="card card-pad" style={{ width: '100%', maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+      <div className="card card-pad modal-in" style={{ width: '100%', maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ marginBottom: 14 }}>
           <div className="h2" style={{ margin: 0 }}>{title}</div>
           <button className="btn sm" onClick={onClose} aria-label="Close"><X size={16} /></button>

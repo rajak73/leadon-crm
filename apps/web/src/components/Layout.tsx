@@ -95,7 +95,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <aside className="sidebar">{sidebar}</aside>
 
       {/* Mobile drawer + backdrop */}
-      {menuOpen && <div className="drawer-backdrop" onClick={() => setMenuOpen(false)} />}
+      {menuOpen && <div className="drawer-backdrop overlay-in" onClick={() => setMenuOpen(false)} />}
       <aside className={`sidebar sidebar-mobile ${menuOpen ? 'open' : ''}`}>{sidebar}</aside>
 
       <div className="main">

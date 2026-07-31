@@ -96,7 +96,7 @@ export default function AdminPanel() {
           />
         </div>
         {results && (results.organizations.length > 0 || results.users.length > 0) && (
-          <div className="card" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20, padding: 0, maxHeight: 340, overflowY: 'auto' }}>
+          <div className="card dropdown-in" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20, padding: 0, maxHeight: 340, overflowY: 'auto' }}>
             {results.organizations.length > 0 && <div className="text-overline" style={{ padding: '8px 12px' }}>Organizations</div>}
             {results.organizations.map((o) => (
               <div key={o.id} onClick={() => { setResults(null); setQ(''); navigate(`/admin/organizations/${o.id}`); }}
@@ -114,7 +114,7 @@ export default function AdminPanel() {
           </div>
         )}
         {results && results.organizations.length === 0 && results.users.length === 0 && (
-          <div className="card card-pad" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20 }}>
+          <div className="card card-pad dropdown-in" style={{ position: 'absolute', top: 44, left: 0, right: 0, zIndex: 20 }}>
             <span className="subtle">No matches for "{q}"</span>
           </div>
         )}

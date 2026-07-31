@@ -174,6 +174,20 @@ h1, h2, h3, .h1, .h2 { letter-spacing: -0.01em; }
 .ig-status-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--primary-50); color: var(--primary-600); display: grid; place-items: center; flex-shrink: 0; }
 .ig-status-ok { border-color: color-mix(in srgb, var(--success) 25%, var(--border)); }
 
+/* Micro-interactions: entrance animations for overlays, modals, dropdowns, toasts */
+@keyframes overlay-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop-in { from { opacity: 0; transform: scale(.96) translateY(4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes dropdown-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.overlay-in { animation: overlay-fade-in .15s ease; }
+.modal-in { animation: modal-pop-in .18s cubic-bezier(.2,.8,.2,1); }
+.dropdown-in { animation: dropdown-in .15s ease; transform-origin: top right; }
+.toast-in { animation: toast-in .18s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .overlay-in, .modal-in, .dropdown-in, .toast-in { animation: none; }
+  .card, .btn, .nav-link, .feature, .price-card, .segment-btn { transition: none; }
+}
+
 /* Rich empty states */
 .empty-state { text-align: center; padding: 48px 24px; }
 .empty-state-ic {

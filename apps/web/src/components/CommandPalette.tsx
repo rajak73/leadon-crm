@@ -72,8 +72,9 @@ export function CommandPalette() {
 
   return (
     <div onClick={() => setOpen(false)}
+      className="overlay-in"
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 60, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '12vh' }}>
-      <div className="card" style={{ width: '100%', maxWidth: 560, padding: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+      <div className="card modal-in" style={{ width: '100%', maxWidth: 560, padding: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
         <input
           ref={inputRef}
           className="input"

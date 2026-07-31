@@ -86,7 +86,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="card" style={{
+        <div className="card dropdown-in" style={{
           position: 'absolute', right: 0, top: 40, width: 320, maxHeight: 420, overflowY: 'auto', zIndex: 30, padding: 0,
         }}>
           <div className="row between" style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
