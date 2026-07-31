@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Target, Bot, UserCircle2, Briefcase, MessageCircle, ShieldCheck, Check } from 'lucide-react';
+import { Target, Bot, UserCircle2, MessageCircle, Zap, Clock, Check } from 'lucide-react';
 
 const features = [
-  { ic: Target, title: 'Unified Lead Capture', desc: 'Instagram, WhatsApp, Facebook, website, referrals and manual — every lead in one place.' },
-  { ic: Bot, title: 'AI-Ready Assistant', desc: 'Rule-based capture today, AI scoring & reply suggestions ready to switch on.' },
-  { ic: UserCircle2, title: 'Customer 360', desc: 'Full identity, timeline, messages, deals, tasks and next best action per customer.' },
-  { ic: Briefcase, title: 'Visual Pipeline', desc: 'Drag deals across stages with live totals and probability.' },
-  { ic: MessageCircle, title: 'Social Inbox', desc: 'Centralize conversations and convert any chat into a tracked lead.' },
-  { ic: ShieldCheck, title: 'Safe Multi-Tenant', desc: 'Strict organization isolation with a Super Admin control panel.' },
+  { ic: MessageCircle, title: 'Instagram Inbox', desc: 'Every DM and comment on your Instagram Business account, in one clean inbox.' },
+  { ic: Target, title: 'Automatic Lead Capture', desc: 'A new conversation becomes a lead instantly — name, contact info and full history saved automatically.' },
+  { ic: Bot, title: 'Smart Auto-Reply', desc: 'Answer common questions instantly with keyword rules, or let AI reply naturally when nothing matches.' },
+  { ic: Clock, title: 'Follow-up Sequences', desc: 'Never leave a customer hanging — automatically follow up if they go quiet.' },
+  { ic: UserCircle2, title: 'Customer 360', desc: 'Full profile, conversation history, notes and lead score for every customer, in one place.' },
+  { ic: Zap, title: 'Real Meta OAuth', desc: 'Connect your own Instagram Business account in a few clicks — no developer setup required.' },
 ];
 
 export default function Marketing() {
@@ -26,11 +26,12 @@ export default function Marketing() {
       </div>
 
       <header className="mk-hero">
-        <span className="pill">AI-Powered CRM & Social Lead Automation</span>
-        <h1>Turn every conversation into revenue.</h1>
+        <span className="pill">Instagram DMs & Comments, Automated</span>
+        <h1>Turn every Instagram message into a customer.</h1>
         <p>
-          LeadOS centralizes leads from Instagram, WhatsApp, Facebook, websites and sales teams —
-          then helps you follow up, track deals and convert, all from one premium workspace.
+          LeadOS connects to your Instagram Business account, automatically captures leads from
+          every DM and comment, and replies for you — so no customer waits, and nothing falls
+          through the cracks.
         </p>
         <div className="row" style={{ justifyContent: 'center' }}>
           <Link to="/signup" className="btn primary">Start free →</Link>
@@ -39,7 +40,7 @@ export default function Marketing() {
       </header>
 
       <section id="features" className="mk-section">
-        <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Everything your revenue team needs</div>
+        <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Everything your Instagram inbox needs</div>
         <div className="grid grid-3">
           {features.map((f) => (
             <div key={f.title} className="card feature">
@@ -55,17 +56,17 @@ export default function Marketing() {
         <div className="card card-pad" style={{ background: 'linear-gradient(135deg,#eef2ff,#faf5ff)' }}>
           <div className="grid grid-2" style={{ alignItems: 'center' }}>
             <div>
-              <span className="pill">Social lead capture</span>
-              <div className="h1">From DM to deal — automatically</div>
+              <span className="pill">Instagram lead capture</span>
+              <div className="h1">From DM to customer — automatically</div>
               <p className="subtle">
-                A new Instagram or WhatsApp message becomes a lead instantly. LeadOS asks for the
-                customer's name and phone, captures the details, and notifies your team — currently in
-                a safe simulation mode, ready for real Meta integration.
+                A new Instagram message becomes a lead instantly. LeadOS asks for the customer's
+                name and phone number, captures the details, and replies right away — for real, on
+                your connected Instagram account.
               </p>
             </div>
             <div className="card card-pad">
               <div className="msg in">Hi, I want pricing</div>
-              <div className="msg out">Thanks for reaching out. Please share your name and phone number so our team can help you faster.</div>
+              <div className="msg out">Thanks for reaching out! Could you share your name and phone number so our team can help you faster?</div>
               <div className="msg in">My name is Rahul, phone 9876543210</div>
               <div className="msg out">Thanks Rahul. Our team will contact you shortly.</div>
             </div>
@@ -77,9 +78,9 @@ export default function Marketing() {
         <div className="h1" style={{ textAlign: 'center', marginBottom: 24 }}>Simple, transparent pricing</div>
         <div className="grid grid-3">
           {[
-            { name: 'Starter', amt: '₹0', note: 'For trying it out', feats: ['1 workspace', 'Up to 500 leads', 'Social simulation'] },
-            { name: 'Pro', amt: '₹2,499', note: 'per month', feats: ['Unlimited leads', 'Pipeline & tasks', 'Team roles'], hi: true },
-            { name: 'Enterprise', amt: "Let's talk", note: 'custom', feats: ['Real Meta integration', 'AI scoring', 'Priority support'] },
+            { name: 'Starter', amt: '₹0', note: 'For trying it out', feats: ['1 Instagram account', 'Up to 500 leads', 'Auto-reply rules'] },
+            { name: 'Pro', amt: '₹2,499', note: 'per month', feats: ['Unlimited leads', 'AI-powered replies', 'Follow-up sequences'], hi: true },
+            { name: 'Enterprise', amt: "Let's talk", note: 'custom', feats: ['Multiple team members', 'Priority support', 'Custom onboarding'] },
           ].map((p) => (
             <div key={p.name} className="card price-card" style={p.hi ? { borderColor: 'var(--primary)', boxShadow: 'var(--shadow-lg)' } : {}}>
               {p.hi && <span className="pill">Most popular</span>}
@@ -101,8 +102,8 @@ export default function Marketing() {
 
       <section className="mk-section" style={{ textAlign: 'center' }}>
         <div className="card card-pad">
-          <div className="h1">Ready to organize your leads?</div>
-          <p className="subtle">Create your workspace in under a minute.</p>
+          <div className="h1">Ready to automate your Instagram?</div>
+          <p className="subtle">Connect your account and start capturing leads in under a minute.</p>
           <Link to="/signup" className="btn primary">Get started free →</Link>
         </div>
       </section>
@@ -112,7 +113,7 @@ export default function Marketing() {
           <Link to="/privacy" className="subtle">Privacy Policy</Link>
           <Link to="/data-deletion" className="subtle">Data Deletion</Link>
         </div>
-        © {new Date().getFullYear()} LeadOS — AI-Powered CRM & Social Lead Automation Platform.
+        © {new Date().getFullYear()} LeadOS — Instagram Lead Automation & Auto-Reply CRM.
       </footer>
     </div>
   );

@@ -19,7 +19,7 @@ async function signup(page: Page) {
 
 test('marketing page renders hero + CTA', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /turn every conversation into revenue/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /turn every instagram message into a customer/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /get started/i }).first()).toBeVisible();
 });
 
@@ -125,5 +125,5 @@ test('logout returns to marketing site', async ({ page }) => {
   await signup(page);
   await page.getByRole('button', { name: /Sign out/ }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: /turn every conversation into revenue/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /turn every instagram message into a customer/i })).toBeVisible();
 });
