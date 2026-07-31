@@ -73,7 +73,7 @@ export async function sendMessengerLike(
   return data.message_id ?? 'unknown';
 }
 
-/** Reply to an Instagram comment via the Graph API. */
+/** Reply to an Instagram comment publicly (visible under the post) via the Graph API. */
 export async function replyToComment(
   commentId: string,
   message: string,
@@ -92,4 +92,34 @@ export async function replyToComment(
   }
   const data: any = await res.json();
   return data.id ?? 'unknown';
+}
+
+/**
+ * Send a "private reply" to a comment — a normal DM to the commenter,
+ * referencing their comment, instead of a public reply visible under the
+ * post. Meta requires this within ~7 days of the comment and only once per
+ * comment id. Uses the same Send API as regular DMs, but the recipient is
+ * `{ comment_id }` instead of `{ id: psid }`.
+ */
+export async function sendPrivateReplyToComment(
+  commentId: string,
+  message: string,
+  pageAccessToken: string
+): Promise<string> {
+  if (!pageAccessToken) throw new Error('Page access token not configured');
+  const url = `${igGraphBase()}/me/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { comment_id: commentId },
+      message: { text: message },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Private reply failed ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data: any = await res.json();
+  return data.message_id ?? 'unknown';
 }

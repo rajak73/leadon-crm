@@ -9,7 +9,7 @@
  */
 import { prisma } from '../prisma.js';
 import { hasRealMetaCreds } from '../config.js';
-import { sendWhatsApp, sendMessengerLike, replyToComment } from './meta/graph.js';
+import { sendWhatsApp, sendMessengerLike, sendPrivateReplyToComment } from './meta/graph.js';
 import { decryptSecret } from '../lib/crypto.js';
 import type { Channel } from '@leados/shared';
 
@@ -68,7 +68,8 @@ export async function sendOutbound(params: SendParams): Promise<SendResult> {
   try {
     let externalId: string;
     if (isComment) {
-      // Reply to the specific inbound comment being answered.
+      // Reply privately via DM to the commenter, referencing their comment,
+      // instead of a public reply visible under the post.
       const lastInbound = await prisma.message.findFirst({
         where: { conversationId, direction: 'INBOUND', type: 'COMMENT' },
         orderBy: { createdAt: 'desc' },
@@ -78,7 +79,7 @@ export async function sendOutbound(params: SendParams): Promise<SendResult> {
         where: { organizationId, provider: 'INSTAGRAM', isConnected: true },
       });
       const pageToken = decryptSecret(integration?.accessToken) ?? '';
-      externalId = await replyToComment(lastInbound.externalId, body, pageToken);
+      externalId = await sendPrivateReplyToComment(lastInbound.externalId, body, pageToken);
     } else if (realChannel === 'WHATSAPP') {
       const recipient = conversation?.externalId;
       if (!recipient) throw new Error('No recipient external id on conversation.');
