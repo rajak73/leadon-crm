@@ -17,11 +17,29 @@ services:
         generateValue: true
       - key: CRON_SECRET
         generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
       - key: FLAG_AI_SCORING_ENABLED
         value: "true"
       - key: AI_PROVIDER
         value: "groq"
       - key: GROQ_API_KEY
+        sync: false
+      # Instagram (see apps/api/.env.example for what each does). Blank =
+      # webhook/real-send/self-serve-OAuth stay disabled, app still boots.
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_GRAPH_VERSION
+        value: "v21.0"
+      - key: META_API_MODE
+        value: "facebook_login"
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: INSTAGRAM_APP_ID
+        sync: false
+      - key: INSTAGRAM_APP_SECRET
+        sync: false
+      - key: INSTAGRAM_OAUTH_REDIRECT_URI
         sync: false
 
   # Frontend Web
