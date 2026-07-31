@@ -30,7 +30,15 @@ router.get('/meta/readiness', (req: Request, res: Response) => {
   const base = `${req.protocol}://${req.get('host')}`;
   const checks = {
     appSecretConfigured: Boolean(config.meta.appSecret),
+    // Lengths only, never the values — diagnostic for the extremely common
+    // copy-paste bug where a trailing space/newline silently breaks HMAC
+    // verification even though the value "looks" identical. Meta app secrets
+    // are 32 hex chars; anything else here means the env var has stray
+    // whitespace or was truncated.
+    appSecretLength: config.meta.appSecret.length,
+    appSecretHasWhitespace: /\s/.test(config.meta.appSecret),
     webhookVerifyTokenConfigured: Boolean(config.meta.webhookVerifyToken),
+    webhookVerifyTokenLength: config.meta.webhookVerifyToken.length,
     whatsappCredsConfigured: hasRealMetaCreds('WHATSAPP'),
     instagramCredsConfigured: hasRealMetaCreds('INSTAGRAM'),
   };
