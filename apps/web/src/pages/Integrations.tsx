@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Camera, CheckCircle2, XCircle, Plug, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, Modal } from '../components/ui';
+import { Card, Badge, EmptyState, Skeleton, SkeletonRows, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 interface Account {
@@ -96,10 +97,10 @@ export default function Integrations() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Instagram Integration</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Connect your Instagram Business Account to receive DMs and comments.</p>
+          <div className="text-display">Instagram Integration</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Connect your Instagram Business Account to receive DMs and comments.</p>
         </div>
         {canManage && !igAccount && platform?.instagramOAuthConfigured && (
           <button className="btn primary" onClick={connectInstagram} disabled={connecting}>
@@ -109,33 +110,65 @@ export default function Integrations() {
       </div>
 
       {banner && (
-        <div className={`hint ${banner.kind === 'error' ? 'error' : ''}`} style={{ marginTop: 8 }}>{banner.text}</div>
+        <div className={`card card-pad mt16 ${banner.kind === 'error' ? '' : 'ig-status-ok'}`} style={banner.kind === 'error' ? { borderColor: 'var(--danger)' } : undefined}>
+          <span className={banner.kind === 'error' ? 'error' : ''}>{banner.text}</span>
+        </div>
       )}
 
       {platform && !platform.instagramOAuthConfigured && (
-        <Card title="Setup required">
-          <p className="hint">
-            Instagram OAuth isn't configured yet. Set <code>INSTAGRAM_APP_ID</code>, <code>INSTAGRAM_APP_SECRET</code>,{' '}
-            <code>INSTAGRAM_OAUTH_REDIRECT_URI</code>, <code>META_APP_SECRET</code>, and <code>META_WEBHOOK_VERIFY_TOKEN</code> in the API
-            environment, then reload this page.
-          </p>
-          <div className="hint mt8">
-            Webhook callback URL (set this in your Meta App): <code>{webhookUrl}</code>
-          </div>
-        </Card>
+        <div className="mt16">
+          <Card title="Setup required">
+            <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+              <AlertTriangle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <p className="hint" style={{ marginTop: 0 }}>
+                  Instagram OAuth isn't configured yet. Set <code>INSTAGRAM_APP_ID</code>, <code>INSTAGRAM_APP_SECRET</code>,{' '}
+                  <code>INSTAGRAM_OAUTH_REDIRECT_URI</code>, <code>META_APP_SECRET</code>, and <code>META_WEBHOOK_VERIFY_TOKEN</code> in the API
+                  environment, then reload this page.
+                </p>
+                <div className="hint mt8">
+                  Webhook callback URL (set this in your Meta App): <code>{webhookUrl}</code>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
 
       <div className="mt16">
         <Card title="Connected account">
-          {loading ? <Loading /> : !igAccount ? (
-            <Empty text="No Instagram account connected yet." />
+          {loading ? (
+            <div className="row" style={{ gap: 12 }}>
+              <Skeleton width={40} height={40} radius={10} />
+              <div style={{ flex: 1 }}>
+                <Skeleton width="35%" height={14} style={{ marginBottom: 8 }} />
+                <Skeleton width="55%" height={12} />
+              </div>
+            </div>
+          ) : !igAccount ? (
+            <EmptyState
+              icon={Plug}
+              title="No Instagram account connected yet"
+              description="Connect your Instagram Business Account to start receiving DMs and comments in this CRM."
+              action={canManage && platform?.instagramOAuthConfigured ? (
+                <button className="btn primary sm" onClick={connectInstagram} disabled={connecting}>
+                  {connecting ? 'Redirecting…' : 'Connect Instagram'}
+                </button>
+              ) : undefined}
+            />
           ) : (
             <div className="row between">
-              <div>
-                <div><strong>@{igAccount.displayName || igAccount.externalId}</strong> <Badge value="active" /></div>
-                <div className="subtle" style={{ fontSize: 13 }}>IG business account id: {igAccount.externalId}</div>
+              <div className="row" style={{ gap: 12 }}>
+                <div className="ig-status-ic"><Camera size={18} /></div>
+                <div>
+                  <div className="text-title">@{igAccount.displayName || igAccount.externalId}</div>
+                  <div className="text-small">IG business account id: {igAccount.externalId}</div>
+                </div>
               </div>
-              {canManage && <button className="btn sm outline" onClick={() => disconnect(igAccount.id)}>Disconnect</button>}
+              <div className="row" style={{ gap: 8 }}>
+                <Badge value="active" />
+                {canManage && <button className="btn sm outline" onClick={() => disconnect(igAccount.id)}>Disconnect</button>}
+              </div>
             </div>
           )}
         </Card>
@@ -144,13 +177,13 @@ export default function Integrations() {
       {igAccount && (
         <div className="mt16">
           <Card title="Webhook subscription">
-            {checkingWebhook ? <Loading /> : !webhookStatus ? (
+            {checkingWebhook ? <SkeletonRows rows={1} /> : !webhookStatus ? (
               <p className="hint">Couldn't read subscription status from Meta.</p>
             ) : (
               <div>
-                <div className="row" style={{ gap: 8 }}>
-                  <Badge value={webhookStatus.hasMessages ? 'messages: on' : 'messages: off'} />
-                  <Badge value={webhookStatus.hasComments ? 'comments: on' : 'comments: off'} />
+                <div className="row" style={{ gap: 16 }}>
+                  <StatusPill ok={webhookStatus.hasMessages} label="Messages" />
+                  <StatusPill ok={webhookStatus.hasComments} label="Comments" />
                 </div>
                 {!webhookStatus.hasComments && (
                   <>
@@ -172,6 +205,16 @@ export default function Integrations() {
       )}
 
       {pickToken && <PagePicker pickToken={pickToken} onDone={() => { setSearchParams({}, { replace: true }); load(); }} onCancel={() => setSearchParams({}, { replace: true })} />}
+    </div>
+  );
+}
+
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="row" style={{ gap: 6 }}>
+      {ok ? <CheckCircle2 size={16} style={{ color: 'var(--success)' }} /> : <XCircle size={16} style={{ color: 'var(--danger)' }} />}
+      <span className="text-title">{label}</span>
+      <span className="text-small">{ok ? 'subscribed' : 'not subscribed'}</span>
     </div>
   );
 }
