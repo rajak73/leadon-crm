@@ -53,15 +53,18 @@ export function createApp() {
     })
   );
 
+  // Structured request logging + metrics (BRD §19.3). Mounted before
+  // everything else (including the webhook route below) so every request —
+  // Meta's webhook deliveries included — is actually visible in logs. It
+  // never touches the body, so it's safe ahead of the webhook's raw parser.
+  app.use(requestLogger);
+
   // Meta webhook is mounted BEFORE express.json() because signature
   // verification needs the raw request bytes (the route uses its own raw
   // body parser). BRD §16.
   app.use('/api/v1/webhooks', metaWebhookRoutes);
 
   app.use(express.json({ limit: '1mb' }));
-
-  // Structured request logging + metrics (BRD §19.3).
-  app.use(requestLogger);
 
   // Health / readiness — cheap, never rate-limited (free hosts ping these).
   app.get('/health', (_req, res) =>

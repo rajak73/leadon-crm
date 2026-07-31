@@ -9,6 +9,7 @@ import { enqueueWebhookEvent, isQueueEnabled } from '../services/bullmq.js';
 import { parseSignedRequest } from '../services/meta/signed-request.js';
 import { handleDataDeletion, getDeletionStatus } from '../services/meta/data-deletion.js';
 import { config, hasRealMetaCreds } from '../config.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Real Meta webhook endpoint (BRD §16). Handles both the GET verification
@@ -67,6 +68,7 @@ router.post(
 
     // Reject anything we can't cryptographically trust (BRD §16, §11.3).
     if (!verifySignature(rawBody, signature)) {
+      logger.warn('meta_webhook_bad_signature', { hasSignatureHeader: Boolean(signature), bodyLen: rawBody.length });
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
@@ -78,11 +80,15 @@ router.post(
     }
 
     const messages = parseMetaPayload(payload);
+    logger.info('meta_webhook_received', { object: payload?.object, entries: payload?.entry?.length ?? 0, parsedMessages: messages.length });
     let accepted = 0;
 
     for (const msg of messages) {
       const organizationId = await resolveOrgByRecipient(msg.channel, msg.recipientExternalId);
-      if (!organizationId) continue; // no mapped org → ignore (not our account)
+      if (!organizationId) {
+        logger.warn('meta_webhook_unmapped_account', { channel: msg.channel, recipientExternalId: msg.recipientExternalId });
+        continue; // no mapped org → ignore (not our account)
+      }
 
       const event = await prisma.webhookEvent.create({
         data: {
