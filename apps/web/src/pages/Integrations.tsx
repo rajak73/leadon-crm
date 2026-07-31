@@ -22,6 +22,9 @@ export default function Integrations() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [banner, setBanner] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [webhookStatus, setWebhookStatus] = useState<{ subscribedFields: string[]; hasComments: boolean; hasMessages: boolean } | null>(null);
+  const [checkingWebhook, setCheckingWebhook] = useState(false);
+  const [fixingWebhook, setFixingWebhook] = useState(false);
   const canManage = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN';
 
   const igAccount = accounts.find((a) => a.provider === 'INSTAGRAM' && a.isConnected);
@@ -35,6 +38,30 @@ export default function Integrations() {
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!igAccount) { setWebhookStatus(null); return; }
+    setCheckingWebhook(true);
+    api.get<{ subscribedFields: string[]; hasComments: boolean; hasMessages: boolean }>(`/api/v1/integrations/${igAccount.id}/webhook-status`)
+      .then(setWebhookStatus)
+      .catch(() => setWebhookStatus(null))
+      .finally(() => setCheckingWebhook(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [igAccount?.id]);
+
+  async function fixWebhookSubscription() {
+    if (!igAccount) return;
+    setFixingWebhook(true);
+    try {
+      const r = await api.post<{ ok: boolean; subscribedFields: string[] }>(`/api/v1/integrations/${igAccount.id}/resubscribe`, {});
+      setWebhookStatus({ subscribedFields: r.subscribedFields, hasComments: r.subscribedFields.includes('comments'), hasMessages: r.subscribedFields.includes('messages') });
+      setBanner({ kind: 'ok', text: 'Webhook subscription refreshed.' });
+    } catch (e: any) {
+      setBanner({ kind: 'error', text: e.message });
+    } finally {
+      setFixingWebhook(false);
+    }
+  }
 
   // Handle the OAuth callback's redirect back into the app.
   useEffect(() => {
@@ -113,6 +140,36 @@ export default function Integrations() {
           )}
         </Card>
       </div>
+
+      {igAccount && (
+        <div className="mt16">
+          <Card title="Webhook subscription">
+            {checkingWebhook ? <Loading /> : !webhookStatus ? (
+              <p className="hint">Couldn't read subscription status from Meta.</p>
+            ) : (
+              <div>
+                <div className="row" style={{ gap: 8 }}>
+                  <Badge value={webhookStatus.hasMessages ? 'messages: on' : 'messages: off'} />
+                  <Badge value={webhookStatus.hasComments ? 'comments: on' : 'comments: off'} />
+                </div>
+                {!webhookStatus.hasComments && (
+                  <>
+                    <p className="hint mt8">
+                      This account isn't subscribed to comment events yet — that's why comments aren't showing up in
+                      the inbox. This usually happens if the account was connected before comment support was added.
+                    </p>
+                    {canManage && (
+                      <button className="btn sm primary mt8" onClick={fixWebhookSubscription} disabled={fixingWebhook}>
+                        {fixingWebhook ? 'Fixing…' : 'Fix comment subscription'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {pickToken && <PagePicker pickToken={pickToken} onDone={() => { setSearchParams({}, { replace: true }); load(); }} onCancel={() => setSearchParams({}, { replace: true })} />}
     </div>

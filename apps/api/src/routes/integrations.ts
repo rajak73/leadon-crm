@@ -11,6 +11,8 @@ import {
   getInstagramConnectUrl,
   connectInstagramAccount,
   unsubscribePageWebhook,
+  subscribePageWebhook,
+  getSubscribedFields,
   type EligiblePage,
 } from '../services/meta/oauth.js';
 import { decryptSecret } from '../lib/crypto.js';
@@ -190,6 +192,56 @@ router.patch(
       data: { externalId },
     });
     res.json({ id: updated.id, externalId: updated.externalId });
+  })
+);
+
+/**
+ * GET /api/v1/integrations/:id/webhook-status — which fields (messages,
+ * comments) this account is actually subscribed to right now, straight from
+ * Meta. Accounts connected before `comments` support was added may only have
+ * `messages` — this is how to tell without guessing.
+ */
+router.get(
+  '/:id/webhook-status',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const account = await prisma.integrationAccount.findFirst({
+      where: { id: req.params.id, organizationId: req.org!.organizationId },
+    });
+    if (!account) throw NotFound('Integration not found');
+    if (account.provider !== 'INSTAGRAM' || !account.pageId || !account.accessToken) {
+      throw BadRequest('Not a connected Instagram account');
+    }
+    const token = decryptSecret(account.accessToken);
+    if (!token) throw BadRequest('No access token stored for this account');
+    const subscribedFields = await getSubscribedFields(account.pageId, token);
+    res.json({ subscribedFields, hasComments: subscribedFields.includes('comments'), hasMessages: subscribedFields.includes('messages') });
+  })
+);
+
+/**
+ * POST /api/v1/integrations/:id/resubscribe — re-run the webhook field
+ * subscription (messages + comments) for an already-connected account.
+ * Needed for accounts connected before comment support existed, or if Meta
+ * ever drops the subscription silently.
+ */
+router.post(
+  '/:id/resubscribe',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const account = await prisma.integrationAccount.findFirst({
+      where: { id: req.params.id, organizationId: req.org!.organizationId },
+    });
+    if (!account) throw NotFound('Integration not found');
+    if (account.provider !== 'INSTAGRAM' || !account.pageId || !account.accessToken) {
+      throw BadRequest('Not a connected Instagram account');
+    }
+    const token = decryptSecret(account.accessToken);
+    if (!token) throw BadRequest('No access token stored for this account');
+    await subscribePageWebhook(account.pageId, token);
+    await prisma.integrationAccount.update({ where: { id: account.id }, data: { webhookSubscribed: true } });
+    const subscribedFields = await getSubscribedFields(account.pageId, token);
+    res.json({ ok: true, subscribedFields });
   })
 );
 

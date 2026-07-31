@@ -201,6 +201,21 @@ export async function unsubscribePageWebhook(pageOrUserId: string, accessToken: 
 }
 
 /**
+ * Read back which fields this account is actually subscribed to right now.
+ * Accounts connected before `comments` was added to subscribePageWebhook's
+ * field list only ever subscribed to `messages` — this lets us see that
+ * without guessing, and `subscribePageWebhook` (re-run) fixes it.
+ */
+export async function getSubscribedFields(pageOrUserId: string, accessToken: string): Promise<string[]> {
+  const res = await fetch(
+    `${igGraphBase()}/${pageOrUserId}/subscribed_apps?access_token=${encodeURIComponent(accessToken)}`
+  );
+  if (!res.ok) throw new Error(`Subscribed-apps lookup failed ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data: any = await res.json();
+  return data.data?.[0]?.subscribed_fields ?? [];
+}
+
+/**
  * Persist a chosen account's Instagram connection for an org: upsert the
  * IntegrationAccount, subscribe the webhook, store the encrypted token.
  */
