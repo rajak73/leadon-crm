@@ -162,14 +162,24 @@ export async function refreshInstagramLoginToken(token: string): Promise<TokenRe
   return { accessToken: data.access_token, expiresInSeconds: data.expires_in };
 }
 
-/** Fetch the connected account's username for display purposes. */
-export async function getInstagramLoginProfile(userId: string, accessToken: string): Promise<{ username?: string }> {
-  const res = await fetch(
-    `${igGraphBase()}/${userId}?fields=username&access_token=${encodeURIComponent(accessToken)}`
-  );
-  if (!res.ok) return {};
+/**
+ * Fetch the connected account's canonical id + username via /me. The id
+ * returned by the OAuth token exchange (used as a fallback here) is NOT
+ * always the same id Meta uses in webhook `entry.id` — confirmed empirically:
+ * a real webhook delivery referenced a different numeric id than what the
+ * token exchange returned for the same account. /me?fields=id,username is
+ * the canonical "who does this token belong to" identity and is what
+ * webhook events actually reference, so it must be used as the stored
+ * externalId, not the token-exchange userId.
+ */
+export async function getInstagramLoginProfile(
+  userId: string,
+  accessToken: string
+): Promise<{ id: string; username?: string }> {
+  const res = await fetch(`${igGraphBase()}/me?fields=id,username&access_token=${encodeURIComponent(accessToken)}`);
+  if (!res.ok) return { id: userId };
   const data: any = await res.json().catch(() => ({}));
-  return { username: data.username };
+  return { id: data.id ?? userId, username: data.username };
 }
 
 // ---------------------------------------------------------------------------

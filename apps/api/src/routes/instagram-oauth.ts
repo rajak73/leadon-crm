@@ -61,14 +61,18 @@ router.get(
     try {
       // instagram_login mode: no Page picker — one authorize = one account.
       if (config.meta.apiMode === 'instagram_login') {
-        const { accessToken: shortToken, userId } = await exchangeCodeForInstagramLoginToken(code);
+        const { accessToken: shortToken, userId: tokenUserId } = await exchangeCodeForInstagramLoginToken(code);
         const { accessToken: longToken, expiresInSeconds } = await getInstagramLoginLongLivedToken(shortToken);
-        const { username } = await getInstagramLoginProfile(userId, longToken);
+        // The token-exchange userId is NOT reliably the same id Meta uses in
+        // webhook entry.id — /me is the canonical identity (see comment on
+        // getInstagramLoginProfile). Use it for both the stored externalId
+        // and the subscribed_apps call so webhook resolution always matches.
+        const { id: canonicalId, username } = await getInstagramLoginProfile(tokenUserId, longToken);
         const page: EligiblePage = {
-          pageId: userId, // no real Page in this mode — subscribed_apps calls target the IG user id directly
-          pageName: username ?? userId,
+          pageId: canonicalId, // no real Page in this mode — subscribed_apps calls target the IG user id directly
+          pageName: username ?? canonicalId,
           pageAccessToken: longToken,
-          igUserId: userId,
+          igUserId: canonicalId,
           igUsername: username,
         };
         await connectInstagramAccount(decoded.organizationId, page, longToken, expiresInSeconds);
