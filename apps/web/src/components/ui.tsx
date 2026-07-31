@@ -127,14 +127,28 @@ export function EmptyState({
   );
 }
 
-export function Avatar({ name }: { name: string }) {
+export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
   const initials = name
     .split(' ')
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
     .toUpperCase();
-  return <div className="avatar">{initials}</div>;
+  return (
+    <div className="avatar" style={{ width: size, height: size, fontSize: Math.round(size * 0.4), flexShrink: 0 }}>
+      {initials}
+    </div>
+  );
+}
+
+/** Horizontal score meter (0-100) — color-coded low/mid/high, used for lead score. */
+export function ScoreMeter({ value }: { value: number }) {
+  const tier = value >= 70 ? 'high' : value >= 40 ? 'mid' : 'low';
+  return (
+    <div className="score-meter" title={`Score: ${value}/100`}>
+      <div className={`score-meter-fill ${tier}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+    </div>
+  );
 }
 
 export function money(n: number) {

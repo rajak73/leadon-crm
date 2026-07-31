@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   PlusCircle, ArrowRightLeft, StickyNote, IdCard, Sparkles, Briefcase, Cog, MessageSquareReply, UserCheck, Pencil,
+  ListChecks, Clock, MessageCircle, Activity as ActivityIcon,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, money } from '../components/ui';
+import { Card, Badge, Empty, EmptyState, Avatar, ScoreMeter, Skeleton, SkeletonRows, money } from '../components/ui';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
 
 interface Lead {
@@ -103,18 +104,47 @@ export default function LeadDetail() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!lead) return <Loading />;
+
+  if (!lead) {
+    return (
+      <div>
+        <Link to="/app/leads" className="subtle">← Leads</Link>
+        <div className="row mt8" style={{ gap: 16 }}>
+          <Skeleton width={56} height={56} radius={999} />
+          <div style={{ flex: 1 }}>
+            <Skeleton width="30%" height={20} style={{ marginBottom: 8 }} />
+            <Skeleton width="50%" height={13} />
+          </div>
+        </div>
+        <div className="grid grid-3 mt16">
+          <Card title="Details"><SkeletonRows rows={3} /></Card>
+          <Card title="Deals"><SkeletonRows rows={2} /></Card>
+          <Card title="Tasks"><SkeletonRows rows={2} /></Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <Link to="/app/leads" className="subtle">← Leads</Link>
-      <div className="row between mt8">
-        <div>
-          <div className="h1" style={{ marginBottom: 2 }}>{lead.name}</div>
-          <div className="row" style={{ gap: 8 }}>
+      <div className="profile-header mt8">
+        <Avatar name={lead.name} size={56} />
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{lead.name}</div>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <Badge value={lead.status} /> <Badge value={lead.source} />
-            <span className="subtle">Score: <strong>{lead.score}</strong></span>
+            <div className="row" style={{ gap: 8 }}>
+              <span className="text-small">Score</span>
+              <ScoreMeter value={lead.score} />
+              <span className="text-small" style={{ fontWeight: 700, color: 'var(--text)' }}>{lead.score}</span>
+            </div>
           </div>
+          {lead.tags.length > 0 && (
+            <div className="row mt8" style={{ gap: 6, flexWrap: 'wrap' }}>
+              {lead.tags.map((t) => <span key={t} className="badge gray">{t}</span>)}
+            </div>
+          )}
         </div>
         <button className="btn outline" onClick={scoreLead}><Sparkles size={14} /> Re-score</button>
       </div>
@@ -167,7 +197,9 @@ export default function LeadDetail() {
         </Card>
 
         <Card title={`Deals (${lead.deals.length})`}>
-          {lead.deals.length === 0 ? <Empty text="No deals" /> : lead.deals.map((d) => (
+          {lead.deals.length === 0 ? (
+            <EmptyState icon={Briefcase} title="No deals yet" description="Deals created from this lead will show up here." />
+          ) : lead.deals.map((d) => (
             <div key={d.id} className="row between mt8">
               <span>{d.title} <span className="subtle">· {d.stage?.name}</span></span>
               <strong>{money(d.value)}</strong>
@@ -176,7 +208,9 @@ export default function LeadDetail() {
         </Card>
 
         <Card title={`Tasks (${lead.tasks.length})`}>
-          {lead.tasks.length === 0 ? <Empty text="No tasks" /> : lead.tasks.map((t) => (
+          {lead.tasks.length === 0 ? (
+            <EmptyState icon={ListChecks} title="No tasks yet" description="Tasks assigned for this lead will show up here." />
+          ) : lead.tasks.map((t) => (
             <div key={t.id} className="row between mt8">
               <span>{t.title}</span><Badge value={t.status} />
             </div>
@@ -186,7 +220,9 @@ export default function LeadDetail() {
 
       <div className="mt16">
         <Card title="Follow-ups" action={<Link className="btn sm outline" to="/app/follow-ups">Manage rules</Link>}>
-          {followUps.length === 0 ? <Empty text="No follow-ups sent yet." /> : followUps.map((f) => (
+          {followUps.length === 0 ? (
+            <EmptyState icon={Clock} title="No follow-ups sent yet" description="Automated follow-up sequences will appear here once triggered." />
+          ) : followUps.map((f) => (
             <div key={f.id} className="row between mt8">
               <span>{f.rule.name}</span>
               <span><Badge value={f.status} /> <span className="subtle" style={{ fontSize: 12 }}>{new Date(f.createdAt).toLocaleDateString()}</span></span>
@@ -204,7 +240,9 @@ export default function LeadDetail() {
               <button className="btn primary" onClick={addNote} disabled={busy || !note.trim()}>Add</button>
             </div>
           </div>
-          {lead.activities.length === 0 ? <Empty text="No activity yet." /> : (
+          {lead.activities.length === 0 ? (
+            <EmptyState icon={ActivityIcon} title="No activity yet" description="Status changes, notes, and automation events will appear here." />
+          ) : (
             <div style={{ position: 'relative' }}>
               {lead.activities.map((a) => {
                 const Icon = ACT_ICON[a.type] ?? DEFAULT_ACT_ICON;
@@ -212,8 +250,8 @@ export default function LeadDetail() {
                 <div key={a.id} className="row" style={{ gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                   <Icon size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14 }}>{a.message}</div>
-                    <div className="subtle" style={{ fontSize: 12 }}>{a.type.replace(/_/g, ' ')} · {new Date(a.createdAt).toLocaleString()}</div>
+                    <div className="text-body">{a.message}</div>
+                    <div className="text-caption">{a.type.replace(/_/g, ' ')} · {new Date(a.createdAt).toLocaleString()}</div>
                   </div>
                 </div>
                 );
@@ -223,7 +261,9 @@ export default function LeadDetail() {
         </Card>
 
         <Card title="Conversations" action={lead.conversations.length > 0 ? <Link className="btn sm outline" to="/app/inbox">Open in Inbox</Link> : undefined}>
-          {lead.conversations.length === 0 ? <Empty text="No conversations" /> : lead.conversations.map((c) => (
+          {lead.conversations.length === 0 ? (
+            <EmptyState icon={MessageCircle} title="No conversations" description="DMs and comments linked to this lead will show up here." />
+          ) : lead.conversations.map((c) => (
             <div key={c.id} style={{ marginBottom: 12 }}>
               <div className="row between">
                 <span><Badge value={c.channel} /> {c.type && <Badge value={c.type} />}</span>
