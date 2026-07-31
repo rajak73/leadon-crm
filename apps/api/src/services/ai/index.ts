@@ -107,17 +107,19 @@ export async function generateAutoReply(ctx: {
   needsName: boolean;
   needsPhone: boolean;
   fallbackReply: string;
+  surface?: 'dm' | 'comment';
 }): Promise<AutoReplyResult> {
   const provider = getProvider();
   if (isAiEnabled() && provider) {
     try {
       const askFor = [ctx.needsName && 'their name', ctx.needsPhone && 'a phone number'].filter(Boolean).join(' and ');
+      const surfaceDesc = ctx.surface === 'comment' ? "a customer's public comment on one of our Instagram posts" : "a customer's Instagram DM";
       const out = await provider.complete(
         [
           {
             role: 'system',
             content:
-              'You are a friendly, concise Instagram business assistant replying automatically to a customer DM. ' +
+              `You are a friendly, concise Instagram business assistant replying automatically to ${surfaceDesc}. ` +
               'Reply helpfully in 1-2 short sentences to what they actually said. ' +
               'Never invent specifics you do not know (prices, stock, policies, dates) — keep those general and say the team will follow up. ' +
               (askFor ? `End by warmly asking for ${askFor} so the team can help them faster. ` : '') +

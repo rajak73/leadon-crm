@@ -107,16 +107,43 @@ async function processInboundComment(payload: InboundPayload, isSimulation: bool
     link: '/app/inbox',
   });
 
-  // Step 7: keyword rules apply to comments too (Message Count/Content Match).
+  // Step 7: an admin-defined keyword rule takes precedence, same as DMs.
+  // ASSIGN_HUMAN skips auto-reply entirely; otherwise every comment gets a
+  // reply — either the matched rule's template or an AI-generated one.
   const rule = await matchAutoReplyRule(organizationId, text);
   let replyMessageId = '';
   let replyStatus = 'AWAITING_REPLY';
-  if (rule?.action === 'REPLY' && rule.replyTemplate) {
+  if (rule?.action === 'ASSIGN_HUMAN') {
+    await logActivity({
+      organizationId,
+      type: 'AUTO_REPLY_ASSIGNED_HUMAN',
+      message: `Rule "${rule.keyword}" flagged this comment for a human reply`,
+    });
+    await createNotification({
+      organizationId,
+      type: 'SYSTEM',
+      title: 'Human reply needed on a comment',
+      body: text.slice(0, 140),
+      link: '/app/inbox',
+    });
+  } else {
+    let replyBody = rule?.action === 'REPLY' && rule.replyTemplate ? rule.replyTemplate : '';
+    if (!replyBody) {
+      const ai = await generateAutoReply({
+        messageText: text,
+        leadName: senderName ?? null,
+        needsName: false,
+        needsPhone: false,
+        fallbackReply: "Thanks for your comment! We'll get back to you shortly — feel free to DM us for a faster reply.",
+        surface: 'comment',
+      });
+      replyBody = ai.reply;
+    }
     const send = await sendOutbound({
       organizationId,
       conversationId: conversation.id,
       channel,
-      body: rule.replyTemplate,
+      body: replyBody,
       isSimulation,
     });
     replyMessageId = send.messageId;
@@ -124,7 +151,7 @@ async function processInboundComment(payload: InboundPayload, isSimulation: bool
     await logActivity({
       organizationId,
       type: 'AUTO_REPLY_TRIGGERED',
-      message: `Rule "${rule.keyword}" auto-replied to a comment`,
+      message: rule?.action === 'REPLY' ? `Rule "${rule.keyword}" auto-replied to a comment` : 'AI auto-replied to a comment',
     });
   }
 
