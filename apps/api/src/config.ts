@@ -1,8 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const isProduction = (process.env.NODE_ENV ?? 'development') === 'production';
+
 function required(name: string, fallback?: string): string {
-  const v = process.env[name] ?? fallback;
+  const v = process.env[name] ?? (isProduction ? undefined : fallback);
   if (v === undefined) {
     throw new Error(`Missing required env var: ${name}`);
   }
@@ -12,7 +14,7 @@ function required(name: string, fallback?: string): string {
 export const config = {
   port: parseInt(process.env.PORT ?? '4000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
-  isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
+  isProduction,
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
 
   jwtSecret: required('JWT_SECRET', 'dev-insecure-secret-change-me'),
@@ -71,13 +73,33 @@ export const config = {
   // Meta (BRD §16) — presence gates real sends (BRD §11.3)
   meta: {
     appSecret: process.env.META_APP_SECRET ?? '',
+    graphVersion: process.env.META_GRAPH_VERSION ?? 'v21.0',
+    // 'facebook_login' = Instagram Graph API via a linked Facebook Page
+    // (Page access tokens, graph.facebook.com). 'instagram_login' = the
+    // newer Page-less "Instagram API with Instagram Login" (IG user access
+    // tokens, graph.instagram.com). They are different OAuth flows and
+    // different token types — not interchangeable.
+    apiMode: (process.env.META_API_MODE ?? 'facebook_login') as 'facebook_login' | 'instagram_login',
     igAppId: process.env.INSTAGRAM_APP_ID ?? '',
     igAppSecret: process.env.INSTAGRAM_APP_SECRET ?? '',
+    igRedirectUri: process.env.INSTAGRAM_OAUTH_REDIRECT_URI ?? '',
     waPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
     waAccessToken: process.env.WHATSAPP_ACCESS_TOKEN ?? '',
     webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN ?? '',
   },
+
+  // Symmetric key for encrypting IntegrationAccount access tokens at rest
+  // (32 raw bytes, base64-encoded). Dev fallback only — required in prod.
+  tokenEncryptionKey: required(
+    'TOKEN_ENCRYPTION_KEY',
+    'ZGV2LWluc2VjdXJlLTMyLWJ5dGUtZW5jcnlwdGlvbi1rZXkh'
+  ),
 };
+
+/** True when Instagram OAuth (app id/secret + redirect URI) is configured. */
+export function isInstagramOAuthConfigured(): boolean {
+  return Boolean(config.meta.igAppId && config.meta.igAppSecret && config.meta.igRedirectUri);
+}
 
 /** True only when the given channel has real credentials configured. */
 export function hasRealMetaCreds(channel: 'INSTAGRAM' | 'WHATSAPP' | 'FACEBOOK'): boolean {

@@ -9,19 +9,18 @@ import { NotificationBell } from './NotificationBell';
 import { CommandPalette } from './CommandPalette';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
 
+// Instagram MVP surface only. The rest of the CRM (Leads, Deals, Pipeline,
+// Contacts, Tasks, Workflows, Reports, Billing, Simulator) stays fully
+// implemented and reachable by direct URL — just not linked from the sidebar,
+// per the product decision to ship an Instagram-only front door for now.
 const nav = [
   { to: '/app', key: 'nav.dashboard', icon: '📊', end: true },
-  { to: '/app/reports', key: 'nav.reports', icon: '📈' },
-  { to: '/app/leads', key: 'nav.leads', icon: '🎯' },
-  { to: '/app/contacts', key: 'nav.contacts', icon: '👤' },
-  { to: '/app/pipeline', key: 'nav.pipeline', icon: '🗂️' },
-  { to: '/app/tasks', key: 'nav.tasks', icon: '✅' },
   { to: '/app/inbox', key: 'nav.inbox', icon: '💬' },
-  { to: '/app/workflows', key: 'nav.workflows', icon: '⚙️' },
-  { to: '/app/simulator', key: 'nav.simulator', icon: '⚡' },
+  { to: '/app/leads', key: 'nav.leads', icon: '🎯' },
+  { to: '/app/auto-reply-rules', key: 'nav.autoReplyRules', icon: '🤖' },
+  { to: '/app/follow-ups', key: 'nav.followUps', icon: '⏱️' },
   { to: '/app/integrations', key: 'nav.integrations', icon: '🔌' },
   { to: '/app/team', key: 'nav.team', icon: '👥' },
-  { to: '/app/billing', key: 'nav.billing', icon: '💳' },
   { to: '/app/api-docs', key: 'nav.apiDocs', icon: '📖' },
 ];
 

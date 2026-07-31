@@ -5,7 +5,20 @@
  */
 import { config } from '../../config.js';
 
-const GRAPH_VERSION = 'v21.0';
+const GRAPH_VERSION = config.meta.graphVersion;
+
+/**
+ * IG send/reply calls must hit a different host depending on the connection
+ * mode: Page-linked ("facebook_login") tokens only work against
+ * graph.facebook.com; direct Instagram Login tokens only work against
+ * graph.instagram.com (confirmed empirically — the wrong host returns
+ * "Cannot parse access token" for either token type).
+ */
+export function igGraphBase(): string {
+  return config.meta.apiMode === 'instagram_login'
+    ? `https://graph.instagram.com/${GRAPH_VERSION}`
+    : `https://graph.facebook.com/${GRAPH_VERSION}`;
+}
 
 /** Send a WhatsApp text message via the Cloud API. */
 export async function sendWhatsApp(toPhone: string, body: string): Promise<string> {
@@ -42,7 +55,7 @@ export async function sendMessengerLike(
   pageAccessToken: string
 ): Promise<string> {
   if (!pageAccessToken) throw new Error('Page access token not configured');
-  const url = `https://graph.facebook.com/${GRAPH_VERSION}/me/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
+  const url = `${igGraphBase()}/me/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,4 +71,25 @@ export async function sendMessengerLike(
   }
   const data: any = await res.json();
   return data.message_id ?? 'unknown';
+}
+
+/** Reply to an Instagram comment via the Graph API. */
+export async function replyToComment(
+  commentId: string,
+  message: string,
+  pageAccessToken: string
+): Promise<string> {
+  if (!pageAccessToken) throw new Error('Page access token not configured');
+  const url = `${igGraphBase()}/${commentId}/replies?access_token=${encodeURIComponent(pageAccessToken)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Comment reply failed ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data: any = await res.json();
+  return data.id ?? 'unknown';
 }

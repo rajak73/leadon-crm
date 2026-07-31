@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Badge, Loading, Empty } from '../components/ui';
 
-interface Conv { id: string; channel: string; customerName?: string | null; lead?: { id: string; name: string } | null; lastMessage?: { body: string } | null; }
-interface Message { id: string; direction: string; body: string; status: string; createdAt: string; isSimulation: boolean; }
-interface Thread { id: string; channel: string; customerName?: string | null; messages: Message[]; }
+interface Conv { id: string; channel: string; type: string; customerName?: string | null; unreadCount: number; lead?: { id: string; name: string } | null; lastMessage?: { body: string } | null; }
+interface Message { id: string; direction: string; body: string; status: string; createdAt: string; isSimulation: boolean; type: string; }
+interface Thread { id: string; channel: string; type: string; customerName?: string | null; lead?: { id: string; name: string } | null; messages: Message[]; }
 
 export default function Inbox() {
   const [convs, setConvs] = useState<Conv[]>([]);
+  const [tab, setTab] = useState<'DM' | 'COMMENT'>('DM');
   const [active, setActive] = useState<string | null>(null);
   const [thread, setThread] = useState<Thread | null>(null);
   const [reply, setReply] = useState('');
@@ -15,24 +17,47 @@ export default function Inbox() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [summary, setSummary] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
+  const [instagramConnected, setInstagramConnected] = useState(false);
+
+  async function loadPlatform() {
+    try {
+      const r = await api.get<{ platform: { instagram: boolean } }>('/api/v1/integrations');
+      setInstagramConnected(r.platform.instagram);
+    } catch { /* noop */ }
+  }
 
   async function loadConvs() {
     setLoading(true);
     const r = await api.get<Conv[]>('/api/v1/conversations');
     setConvs(r);
     setLoading(false);
-    if (!active && r[0]) openThread(r[0].id);
   }
   async function openThread(id: string) {
     setActive(id);
     setThread(await api.get<Thread>(`/api/v1/conversations/${id}`));
   }
-  useEffect(() => { loadConvs(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadConvs(); loadPlatform(); /* eslint-disable-next-line */ }, []);
+
+  const filtered = useMemo(() => convs.filter((c) => (c.type || 'DM') === tab), [convs, tab]);
+
+  useEffect(() => {
+    // Auto-select the first conversation in the active tab when nothing's open.
+    if (!active && filtered[0]) openThread(filtered[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered]);
+
+  function switchTab(t: 'DM' | 'COMMENT') {
+    setTab(t);
+    setActive(null);
+    setThread(null);
+  }
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (!thread || !reply.trim()) return;
-    await api.post(`/api/v1/conversations/${thread.id}/reply`, { body: reply, isSimulation: true });
+    // Real send when Instagram is connected; simulation otherwise (no real
+    // credentials to deliver with, so never falsely mark a message sent).
+    await api.post(`/api/v1/conversations/${thread.id}/reply`, { body: reply, isSimulation: !instagramConnected });
     setReply('');
     openThread(thread.id);
   }
@@ -70,16 +95,24 @@ export default function Inbox() {
   return (
     <div>
       <div className="h1">Inbox</div>
-      <p className="subtle" style={{ marginTop: 0 }}>All customer conversations in one place.</p>
+      <p className="subtle" style={{ marginTop: 0 }}>Instagram DMs and comments in one place.</p>
+
+      <div className="row" style={{ gap: 6, marginTop: 8 }}>
+        <button className={`btn sm ${tab === 'DM' ? 'primary' : 'outline'}`} onClick={() => switchTab('DM')}>Direct Messages</button>
+        <button className={`btn sm ${tab === 'COMMENT' ? 'primary' : 'outline'}`} onClick={() => switchTab('COMMENT')}>Comments</button>
+      </div>
 
       <div className="inbox mt16">
         <div className="card" style={{ overflow: 'hidden' }}>
-          {loading ? <Loading /> : convs.length === 0 ? <Empty text="No conversations. Try the Social Simulator." /> :
-            convs.map((c) => (
+          {loading ? <Loading /> : filtered.length === 0 ? <Empty text={tab === 'DM' ? 'No direct messages yet.' : 'No comments yet.'} /> :
+            filtered.map((c) => (
               <div key={c.id} className={`conv-item ${active === c.id ? 'active' : ''}`} onClick={() => openThread(c.id)}>
                 <div className="row between">
                   <strong>{c.customerName || c.lead?.name || 'Unknown'}</strong>
-                  <Badge value={c.channel} />
+                  <span className="row" style={{ gap: 4 }}>
+                    {c.unreadCount > 0 && <span className="badge new">{c.unreadCount}</span>}
+                    <Badge value={c.channel} />
+                  </span>
                 </div>
                 <div className="subtle" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {c.lastMessage?.body || '—'}
@@ -97,7 +130,11 @@ export default function Inbox() {
                   <button className="btn sm outline" onClick={getSummary} disabled={aiBusy}>✨ Summarize</button>
                   <button className="btn sm outline" onClick={getSentiment} disabled={aiBusy}>✨ Sentiment</button>
                   <button className="btn sm outline" onClick={getSuggestions} disabled={aiBusy}>✨ Suggest reply</button>
-                  <button className="btn sm outline" onClick={convert}>Convert to Lead</button>
+                  {thread.lead ? (
+                    <Link className="btn sm outline" to={`/app/leads/${thread.lead.id}`}>View Lead Profile</Link>
+                  ) : thread.type !== 'COMMENT' && (
+                    <button className="btn sm outline" onClick={convert}>Convert to Lead</button>
+                  )}
                 </div>
               </div>
               {summary && <div className="card card-pad" style={{ marginBottom: 10, background: 'var(--primary-50)' }}><strong>Summary:</strong> {summary}</div>}
@@ -127,7 +164,11 @@ export default function Inbox() {
                 <input className="input" placeholder="Type a reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
                 <button className="btn primary">Send</button>
               </form>
-              <div className="hint">Replies are sent in simulation mode (BRD §11.3) — no real message is delivered.</div>
+              <div className="hint">
+                {instagramConnected
+                  ? 'Replies send for real via your connected Instagram account.'
+                  : 'No Instagram account connected — replies are simulated (BRD §11.3), nothing is delivered.'}
+              </div>
             </>
           )}
         </div>

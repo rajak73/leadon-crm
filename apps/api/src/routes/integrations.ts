@@ -1,10 +1,19 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma.js';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth, requireOrg, type AuthedRequest } from '../middleware/auth.js';
-import { NotFound } from '../lib/errors.js';
-import { hasRealMetaCreds, config } from '../config.js';
+import { BadRequest, NotFound } from '../lib/errors.js';
+import { hasRealMetaCreds, config, isInstagramOAuthConfigured } from '../config.js';
+import { encryptSecret } from '../lib/crypto.js';
+import {
+  getInstagramConnectUrl,
+  connectInstagramAccount,
+  unsubscribePageWebhook,
+  type EligiblePage,
+} from '../services/meta/oauth.js';
+import { decryptSecret } from '../lib/crypto.js';
 import { OrgRole } from '@leados/shared';
 
 /**
@@ -40,12 +49,69 @@ router.get(
       // Platform-level Meta config presence (app secret / verify token), safe booleans only.
       platform: {
         instagram: hasRealMetaCreds('INSTAGRAM'),
+        instagramOAuthConfigured: isInstagramOAuthConfigured(),
         whatsapp: hasRealMetaCreds('WHATSAPP'),
         facebook: hasRealMetaCreds('FACEBOOK'),
         webhookVerifyTokenSet: Boolean(config.meta.webhookVerifyToken),
         appSecretSet: Boolean(config.meta.appSecret),
       },
     });
+  })
+);
+
+/** GET /api/v1/integrations/instagram/connect — begin Meta OAuth (owner/admin). */
+router.get(
+  '/instagram/connect',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    if (!isInstagramOAuthConfigured()) {
+      throw BadRequest('Instagram OAuth is not configured (missing app id/secret/redirect URI)');
+    }
+    const state = jwt.sign(
+      { organizationId: req.org!.organizationId, userId: req.auth!.userId, typ: 'ig-connect' },
+      config.jwtSecret,
+      { expiresIn: '10m' }
+    );
+    const authUrl = getInstagramConnectUrl(state);
+    res.json({ authUrl });
+  })
+);
+
+const selectSchema = z.object({
+  pickToken: z.string().min(1),
+  pageId: z.string().min(1),
+});
+
+/**
+ * POST /api/v1/integrations/instagram/select — complete connection when the
+ * OAuth callback found multiple Instagram-linked Pages (owner/admin).
+ */
+router.post(
+  '/instagram/select',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { pickToken, pageId } = selectSchema.parse(req.body);
+    let decoded: {
+      organizationId: string;
+      pages: EligiblePage[];
+      longLivedToken: string;
+      expiresInSeconds?: number;
+      typ: string;
+    };
+    try {
+      decoded = jwt.verify(pickToken, config.jwtSecret) as typeof decoded;
+      if (decoded.typ !== 'ig-pick') throw new Error('bad token');
+    } catch {
+      throw BadRequest('Invalid or expired selection token');
+    }
+    if (decoded.organizationId !== req.org!.organizationId) {
+      throw BadRequest('Selection token does not match the current organization');
+    }
+    const page = decoded.pages.find((p) => p.pageId === pageId);
+    if (!page) throw BadRequest('Selected page was not in the original list');
+
+    await connectInstagramAccount(decoded.organizationId, page, decoded.longLivedToken, decoded.expiresInSeconds);
+    res.json({ ok: true });
   })
 );
 
@@ -67,13 +133,14 @@ router.post(
     const existing = await prisma.integrationAccount.findFirst({
       where: { organizationId: orgId, provider: data.provider, externalId: data.externalId },
     });
+    const encryptedToken = data.accessToken ? encryptSecret(data.accessToken) : undefined;
 
     const account = existing
       ? await prisma.integrationAccount.update({
           where: { id: existing.id },
           data: {
             displayName: data.displayName ?? existing.displayName,
-            accessToken: data.accessToken ?? existing.accessToken,
+            accessToken: encryptedToken ?? existing.accessToken,
             isConnected: true,
           },
         })
@@ -83,7 +150,7 @@ router.post(
             provider: data.provider,
             externalId: data.externalId,
             displayName: data.displayName ?? null,
-            accessToken: data.accessToken ?? null,
+            accessToken: encryptedToken ?? null,
             isConnected: true,
           },
         });
@@ -108,7 +175,14 @@ router.post(
       where: { id: req.params.id, organizationId: req.org!.organizationId },
     });
     if (!account) throw NotFound('Integration not found');
-    await prisma.integrationAccount.update({ where: { id: account.id }, data: { isConnected: false } });
+    if (account.provider === 'INSTAGRAM' && account.pageId && account.accessToken) {
+      const pageToken = decryptSecret(account.accessToken);
+      if (pageToken) await unsubscribePageWebhook(account.pageId, pageToken);
+    }
+    await prisma.integrationAccount.update({
+      where: { id: account.id },
+      data: { isConnected: false, webhookSubscribed: false },
+    });
     res.json({ ok: true });
   })
 );

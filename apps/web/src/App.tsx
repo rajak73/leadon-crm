@@ -22,6 +22,8 @@ import Simulator from './pages/Simulator';
 import Team from './pages/Team';
 import Billing from './pages/Billing';
 import Integrations from './pages/Integrations';
+import FollowUps from './pages/FollowUps';
+import AutoReplyRules from './pages/AutoReplyRules';
 import Workflows from './pages/Workflows';
 import ApiDocs from './pages/ApiDocs';
 import AuditLog from './pages/AuditLog';
@@ -69,6 +71,8 @@ export default function App() {
       <Route path="/app/team" element={<AppRoute><Team /></AppRoute>} />
       <Route path="/app/billing" element={<AppRoute><Billing /></AppRoute>} />
       <Route path="/app/integrations" element={<AppRoute><Integrations /></AppRoute>} />
+      <Route path="/app/follow-ups" element={<AppRoute><FollowUps /></AppRoute>} />
+      <Route path="/app/auto-reply-rules" element={<AppRoute><AutoReplyRules /></AppRoute>} />
       <Route path="/app/workflows" element={<AppRoute><Workflows /></AppRoute>} />
       <Route path="/app/api-docs" element={<AppRoute><ApiDocs /></AppRoute>} />
       <Route path="/app/audit" element={<AppRoute><AuditLog /></AppRoute>} />

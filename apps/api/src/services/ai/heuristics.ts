@@ -12,6 +12,8 @@ export interface LeadLike {
   status?: string | null;
   notes?: string | null;
   messageCount?: number;
+  lastActivityAt?: Date | string | null;
+  avgResponseMinutes?: number | null;
 }
 
 /** Score 0–100 with a short reason (transparent, explainable). */
@@ -37,13 +39,26 @@ export function ruleScore(lead: LeadLike): { score: number; reasons: string[] } 
   const sw = statusWeight[lead.status ?? 'NEW'] ?? 0;
   if (sw !== 0) { score += sw; reasons.push(`Stage ${lead.status} (${sw > 0 ? '+' : ''}${sw})`); }
 
-  // Engagement.
+  // Engagement (message count / conversation length).
   if ((lead.messageCount ?? 0) >= 3) { score += 10; reasons.push('Engaged (3+ messages, +10)'); }
 
   // Intent keywords in notes.
   const text = (lead.notes ?? '').toLowerCase();
   if (/\b(buy|price|pricing|quote|book|demo|urgent|budget|interested)\b/.test(text)) {
     score += 10; reasons.push('Buying-intent keywords (+10)');
+  }
+
+  // Recent activity — leads that are still actively engaging score higher.
+  if (lead.lastActivityAt) {
+    const ageHours = (Date.now() - new Date(lead.lastActivityAt).getTime()) / 3_600_000;
+    if (ageHours <= 24) { score += 10; reasons.push('Active in last 24h (+10)'); }
+    else if (ageHours <= 72) { score += 5; reasons.push('Active in last 3 days (+5)'); }
+  }
+
+  // Response speed — how quickly our team has been replying to this lead.
+  if (typeof lead.avgResponseMinutes === 'number') {
+    if (lead.avgResponseMinutes <= 15) { score += 10; reasons.push('Fast team response (<15m, +10)'); }
+    else if (lead.avgResponseMinutes <= 60) { score += 5; reasons.push('Good team response (<1h, +5)'); }
   }
 
   score = Math.max(0, Math.min(100, score));

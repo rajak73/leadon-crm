@@ -46,6 +46,27 @@ router.post(
       where: { organizationId: orgId, conversation: { leadId: lead.id } },
     });
 
+    // Response speed: avg time between an inbound message and the next
+    // outbound reply, across this lead's conversations (reuses the same
+    // pairing logic as the dashboard's response-time KPI).
+    const inboundMessages = await prisma.message.findMany({
+      where: { organizationId: orgId, direction: 'INBOUND', conversation: { leadId: lead.id } },
+      select: { conversationId: true, createdAt: true },
+    });
+    let totalMs = 0;
+    let samples = 0;
+    for (const inbound of inboundMessages) {
+      const nextOutbound = await prisma.message.findFirst({
+        where: { conversationId: inbound.conversationId, direction: 'OUTBOUND', createdAt: { gt: inbound.createdAt } },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (nextOutbound) {
+        totalMs += nextOutbound.createdAt.getTime() - inbound.createdAt.getTime();
+        samples++;
+      }
+    }
+    const avgResponseMinutes = samples > 0 ? totalMs / samples / 60000 : null;
+
     const result = await scoreLead({
       name: lead.name,
       email: lead.email,
@@ -54,6 +75,8 @@ router.post(
       status: lead.status,
       notes: lead.notes,
       messageCount,
+      lastActivityAt: lead.lastActivityAt,
+      avgResponseMinutes,
     });
 
     await prisma.lead.update({ where: { id: lead.id }, data: { score: result.score } });
@@ -85,7 +108,7 @@ router.post(
       where: { organizationId: orgId },
       orderBy: { lastActivityAt: 'desc' },
       take: BATCH_LIMIT,
-      select: { id: true, name: true, email: true, phone: true, source: true, status: true, notes: true },
+      select: { id: true, name: true, email: true, phone: true, source: true, status: true, notes: true, lastActivityAt: true },
     });
 
     // Compute scores (rule-based = fast, deterministic) then persist in one

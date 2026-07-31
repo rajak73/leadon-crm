@@ -1,14 +1,10 @@
 /**
  * Runs before any test module imports config/prisma. Points the app at an
- * isolated test SQLite DB and sets deterministic secrets.
+ * isolated Postgres test DB (matches the schema's postgresql provider — see
+ * helpers.ts) and sets deterministic secrets.
  */
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const apiRoot = path.resolve(__dirname, '..');
-
-process.env.DATABASE_URL = `file:${path.join(apiRoot, 'test.db')}`;
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgresql://localhost:5432/leados_test';
+process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY ?? 'test-token-encryption-key';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-1234567890';
 process.env.CRON_SECRET = 'test-cron-secret';

@@ -23,6 +23,9 @@ import cronRoutes from './routes/cron.js';
 import aiRoutes from './routes/ai.js';
 import billingRoutes from './routes/billing.js';
 import integrationRoutes from './routes/integrations.js';
+import instagramOAuthRoutes from './routes/instagram-oauth.js';
+import followUpRoutes from './routes/followups.js';
+import autoReplyRuleRoutes from './routes/auto-reply-rules.js';
 import metaWebhookRoutes from './routes/meta-webhook.js';
 import formRoutes from './routes/forms.js';
 import workflowRoutes from './routes/workflows.js';
@@ -104,7 +107,13 @@ export function createApp() {
   app.use('/api/v1/simulation', simulationRoutes);
   app.use('/api/v1/ai', aiRateLimit, aiRoutes);
   app.use('/api/v1/billing', billingRoutes);
+  // Public leg of the Instagram OAuth flow (Meta redirects here directly, no
+  // Authorization header) — mounted before the authenticated integrations
+  // router so its one route is matched first.
+  app.use('/api/v1/integrations', instagramOAuthRoutes);
   app.use('/api/v1/integrations', integrationRoutes);
+  app.use('/api/v1/follow-ups', followUpRoutes);
+  app.use('/api/v1/auto-reply-rules', autoReplyRuleRoutes);
   app.use('/api/v1/forms', formRoutes);
   app.use('/api/v1/workflows', workflowRoutes);
   app.use('/api/v1/calendar', calendarRoutes);

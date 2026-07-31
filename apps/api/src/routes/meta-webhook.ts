@@ -94,10 +94,12 @@ router.post(
           payload: JSON.stringify({
             organizationId,
             channel: msg.channel,
+            kind: msg.kind,
             senderId: msg.senderId,
             senderName: msg.senderName,
             text: msg.text,
             messageId: msg.messageId,
+            mediaId: msg.mediaId,
           }),
         },
       });

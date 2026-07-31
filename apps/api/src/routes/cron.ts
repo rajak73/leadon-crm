@@ -4,6 +4,8 @@ import { config } from '../config.js';
 import { asyncHandler } from '../middleware/error.js';
 import { Unauthorized } from '../lib/errors.js';
 import { drainQueues } from '../services/queue.js';
+import { refreshExpiringInstagramTokens } from '../services/meta/oauth.js';
+import { runDueFollowUps } from '../services/followup.js';
 
 /**
  * Protected cron endpoint (BRD §14.2). cron-job.org calls this every 5 minutes
@@ -26,7 +28,9 @@ router.post(
   requireCronSecret,
   asyncHandler(async (_req, res) => {
     const summary = await drainQueues();
-    res.json({ ok: true, ...summary, at: new Date().toISOString() });
+    const tokenRefresh = await refreshExpiringInstagramTokens();
+    const followUps = await runDueFollowUps();
+    res.json({ ok: true, ...summary, tokenRefresh, followUps, at: new Date().toISOString() });
   })
 );
 

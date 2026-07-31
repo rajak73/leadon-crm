@@ -24,9 +24,12 @@ export interface DeletionOutcome {
 export async function handleDataDeletion(metaUserId: string, baseUrl: string): Promise<DeletionOutcome> {
   const confirmationCode = crypto.randomBytes(8).toString('hex');
 
-  // Find every conversation that originated from this social sender.
+  // Find every conversation that originated from this social sender. Scoped
+  // to Instagram since that's the only channel this app's deletion callback
+  // is registered for — prevents matching an unrelated channel's sender that
+  // happens to share the same external id string.
   const conversations = await prisma.conversation.findMany({
-    where: { externalId: metaUserId },
+    where: { externalId: metaUserId, channel: 'INSTAGRAM' },
     select: { id: true, leadId: true },
   });
 

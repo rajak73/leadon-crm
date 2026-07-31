@@ -7,12 +7,13 @@ import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
 interface Lead {
   id: string; name: string; email?: string | null; phone?: string | null;
   source: string; status: string; score: number; notes?: string | null;
+  tags: string[];
   assignedUser?: { firstName: string; lastName: string } | null;
   createdAt: string; lastActivityAt?: string | null;
   deals: { id: string; title: string; value: number; stage?: { name: string } | null }[];
   tasks: { id: string; title: string; status: string; dueDate?: string | null }[];
   activities: { id: string; type: string; message: string; createdAt: string }[];
-  conversations: { id: string; channel: string; messages: { id: string; direction: string; body: string }[] }[];
+  conversations: { id: string; channel: string; type?: string; externalId?: string | null; messages: { id: string; direction: string; body: string }[] }[];
 }
 
 const ACT_ICON: Record<string, string> = {
@@ -28,10 +29,13 @@ export default function LeadDetail() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', source: 'MANUAL', score: 0 });
+  const [tagInput, setTagInput] = useState('');
+  const [followUps, setFollowUps] = useState<Array<{ id: string; status: string; createdAt: string; rule: { name: string } }>>([]);
 
   async function load() {
     try { setLead(await api.get<Lead>(`/api/v1/leads/${id}`)); }
     catch (e: any) { setErr(e.message); }
+    try { setFollowUps(await api.get(`/api/v1/leads/${id}/follow-ups`)); } catch { /* noop */ }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
@@ -47,6 +51,18 @@ export default function LeadDetail() {
   }
   async function scoreLead() {
     await api.post(`/api/v1/ai/score-lead/${id}`, {});
+    load();
+  }
+  async function addTag() {
+    if (!lead || !tagInput.trim()) return;
+    const next = Array.from(new Set([...lead.tags, tagInput.trim()]));
+    setTagInput('');
+    await api.patch(`/api/v1/leads/${id}`, { tags: next });
+    load();
+  }
+  async function removeTag(tag: string) {
+    if (!lead) return;
+    await api.patch(`/api/v1/leads/${id}`, { tags: lead.tags.filter((t) => t !== tag) });
     load();
   }
   function startEdit() {
@@ -122,6 +138,19 @@ export default function LeadDetail() {
                   {LEAD_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
                 </select>
               </div>
+              <div className="field mt16">
+                <label>Tags</label>
+                <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {lead.tags.length === 0 ? <span className="subtle">No tags</span> : lead.tags.map((t) => (
+                    <span key={t} className="badge gray" style={{ cursor: 'pointer' }} title="Remove" onClick={() => removeTag(t)}>{t} ×</span>
+                  ))}
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <input className="input" placeholder="Add a tag…" value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTag()} />
+                  <button className="btn sm outline" onClick={addTag} disabled={!tagInput.trim()}>Add</button>
+                </div>
+              </div>
             </div>
           )}
         </Card>
@@ -139,6 +168,17 @@ export default function LeadDetail() {
           {lead.tasks.length === 0 ? <Empty text="No tasks" /> : lead.tasks.map((t) => (
             <div key={t.id} className="row between mt8">
               <span>{t.title}</span><Badge value={t.status} />
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <div className="mt16">
+        <Card title="Follow-ups" action={<Link className="btn sm outline" to="/app/follow-ups">Manage rules</Link>}>
+          {followUps.length === 0 ? <Empty text="No follow-ups sent yet." /> : followUps.map((f) => (
+            <div key={f.id} className="row between mt8">
+              <span>{f.rule.name}</span>
+              <span><Badge value={f.status} /> <span className="subtle" style={{ fontSize: 12 }}>{new Date(f.createdAt).toLocaleDateString()}</span></span>
             </div>
           ))}
         </Card>
@@ -168,10 +208,13 @@ export default function LeadDetail() {
           )}
         </Card>
 
-        <Card title="Conversations">
+        <Card title="Conversations" action={lead.conversations.length > 0 ? <Link className="btn sm outline" to="/app/inbox">Open in Inbox</Link> : undefined}>
           {lead.conversations.length === 0 ? <Empty text="No conversations" /> : lead.conversations.map((c) => (
             <div key={c.id} style={{ marginBottom: 12 }}>
-              <div className="row between"><Badge value={c.channel} /></div>
+              <div className="row between">
+                <span><Badge value={c.channel} /> {c.type && <Badge value={c.type} />}</span>
+                {c.externalId && <span className="subtle" style={{ fontSize: 12 }}>IG id: {c.externalId}</span>}
+              </div>
               {c.messages.slice().reverse().map((m) => (
                 <div key={m.id} className={`msg ${m.direction === 'INBOUND' ? 'in' : 'out'}`} style={{ maxWidth: '90%', marginTop: 6 }}>{m.body}</div>
               ))}

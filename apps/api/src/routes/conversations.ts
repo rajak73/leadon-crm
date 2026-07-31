@@ -30,7 +30,9 @@ router.get(
       conversations.map((c) => ({
         id: c.id,
         channel: c.channel,
+        type: c.type,
         customerName: c.customerName,
+        unreadCount: c.unreadCount,
         lead: c.lead,
         lastMessage: c.messages[0] ?? null,
         updatedAt: c.updatedAt,
@@ -52,6 +54,11 @@ router.get(
       },
     });
     if (!conversation) throw NotFound('Conversation not found');
+    // Viewing marks the conversation as read.
+    if (conversation.unreadCount > 0) {
+      await prisma.conversation.update({ where: { id: conversation.id }, data: { unreadCount: 0 } });
+      conversation.unreadCount = 0;
+    }
     // Return messages in chronological order.
     conversation.messages.reverse();
     res.json(conversation);
@@ -83,7 +90,7 @@ router.post(
       body,
       isSimulation,
     });
-    await prisma.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
+    await prisma.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date(), unreadCount: 0 } });
 
     res.status(result.status === 'FAILED' ? 502 : 201).json(result);
   })

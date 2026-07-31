@@ -1,21 +1,20 @@
 import { execSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const apiRoot = path.resolve(__dirname, '..');
 
-// Isolated test database — never touches dev.db.
-const TEST_DB = path.join(apiRoot, 'test.db');
-export const TEST_DB_URL = `file:${TEST_DB}`;
+// Isolated Postgres test database — never touches dev data. The schema's
+// datasource provider is "postgresql" (Neon in prod), so the test DB must be
+// too; a sqlite `file:` URL cannot be pushed against a postgresql-provider
+// schema. Override via TEST_DATABASE_URL if the default local socket differs.
+export const TEST_DB_URL =
+  process.env.TEST_DATABASE_URL ?? 'postgresql://localhost:5432/leados_test';
 
 /** Reset the test DB and (re)apply the Prisma schema. Call once in globalSetup. */
 export function prepareTestDb() {
-  for (const f of [TEST_DB, `${TEST_DB}-journal`]) {
-    if (existsSync(f)) rmSync(f);
-  }
-  execSync('npx prisma db push --skip-generate --accept-data-loss', {
+  execSync('npx prisma db push --skip-generate --accept-data-loss --force-reset', {
     cwd: apiRoot,
     env: { ...process.env, DATABASE_URL: TEST_DB_URL },
     stdio: 'ignore',
@@ -23,9 +22,8 @@ export function prepareTestDb() {
 }
 
 export function cleanupTestDb() {
-  for (const f of [TEST_DB, `${TEST_DB}-journal`]) {
-    if (existsSync(f)) rmSync(f);
-  }
+  // Schema is dropped/recreated by --force-reset on the next run; nothing to
+  // clean up between runs for a real database.
 }
 
 /** Unique email generator for isolated test accounts. */

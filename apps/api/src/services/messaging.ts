@@ -9,7 +9,8 @@
  */
 import { prisma } from '../prisma.js';
 import { hasRealMetaCreds } from '../config.js';
-import { sendWhatsApp, sendMessengerLike } from './meta/graph.js';
+import { sendWhatsApp, sendMessengerLike, replyToComment } from './meta/graph.js';
+import { decryptSecret } from '../lib/crypto.js';
 import type { Channel } from '@leados/shared';
 
 export interface SendParams {
@@ -30,12 +31,16 @@ export interface SendResult {
 export async function sendOutbound(params: SendParams): Promise<SendResult> {
   const { organizationId, conversationId, channel, body, isSimulation } = params;
 
+  const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
+  const isComment = conversation?.type === 'COMMENT';
+
   // Create the outbound message row first (audit trail).
   const message = await prisma.message.create({
     data: {
       organizationId,
       conversationId,
       direction: 'OUTBOUND',
+      type: isComment ? 'COMMENT' : 'DM',
       body,
       status: 'QUEUED',
       isSimulation,
@@ -60,25 +65,33 @@ export async function sendOutbound(params: SendParams): Promise<SendResult> {
     };
   }
 
-  // Resolve the recipient (the customer's external id / phone) from the conv.
-  const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-  const recipient = conversation?.externalId;
-  if (!recipient) {
-    await prisma.message.update({ where: { id: message.id }, data: { status: 'FAILED' } });
-    return { messageId: message.id, status: 'FAILED', reason: 'No recipient external id on conversation.' };
-  }
-
   try {
     let externalId: string;
-    if (realChannel === 'WHATSAPP') {
+    if (isComment) {
+      // Reply to the specific inbound comment being answered.
+      const lastInbound = await prisma.message.findFirst({
+        where: { conversationId, direction: 'INBOUND', type: 'COMMENT' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!lastInbound?.externalId) throw new Error('No source comment id to reply to.');
+      const integration = await prisma.integrationAccount.findFirst({
+        where: { organizationId, provider: 'INSTAGRAM', isConnected: true },
+      });
+      const pageToken = decryptSecret(integration?.accessToken) ?? '';
+      externalId = await replyToComment(lastInbound.externalId, body, pageToken);
+    } else if (realChannel === 'WHATSAPP') {
+      const recipient = conversation?.externalId;
+      if (!recipient) throw new Error('No recipient external id on conversation.');
       externalId = await sendWhatsApp(recipient, body);
     } else {
-      // Instagram / Facebook use the Send API with the page access token stored
-      // on the org's IntegrationAccount.
+      // Instagram / Facebook DMs use the Send API with the page access token
+      // stored on the org's IntegrationAccount.
+      const recipient = conversation?.externalId;
+      if (!recipient) throw new Error('No recipient external id on conversation.');
       const integration = await prisma.integrationAccount.findFirst({
         where: { organizationId, provider: realChannel, isConnected: true },
       });
-      const pageToken = integration?.accessToken ?? '';
+      const pageToken = decryptSecret(integration?.accessToken) ?? '';
       externalId = await sendMessengerLike(recipient, body, pageToken);
     }
     await prisma.message.update({ where: { id: message.id }, data: { status: 'SENT' } });

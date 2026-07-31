@@ -71,6 +71,7 @@ const createSchema = z.object({
   score: z.number().int().min(0).max(100).optional(),
   assignedUserId: z.string().optional(),
   notes: z.string().optional(),
+  tags: z.array(z.string().min(1).max(30)).max(20).optional(),
   customFields: z.record(z.any()).optional(),
 });
 
@@ -91,6 +92,7 @@ router.post(
         score: data.score ?? 0,
         assignedUserId: data.assignedUserId || null,
         notes: data.notes || null,
+        tags: data.tags ? JSON.stringify(data.tags) : null,
         customFields: data.customFields ? JSON.stringify(data.customFields) : null,
         lastActivityAt: new Date(),
       },
@@ -245,6 +247,22 @@ router.get(
   })
 );
 
+/** GET /api/v1/leads/:id/follow-ups — follow-up executions for this lead (Customer 360). */
+router.get(
+  '/:id/follow-ups',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const orgId = req.org!.organizationId;
+    const lead = await prisma.lead.findFirst({ where: { id: req.params.id, organizationId: orgId } });
+    if (!lead) throw NotFound('Lead not found');
+    const executions = await prisma.followUpExecution.findMany({
+      where: { leadId: lead.id, organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      include: { rule: { select: { name: true } } },
+    });
+    res.json(executions);
+  })
+);
+
 const updateSchema = createSchema.partial();
 
 /** PATCH /api/v1/leads/:id */
@@ -268,6 +286,7 @@ router.patch(
         ...(data.score !== undefined ? { score: data.score } : {}),
         ...(data.assignedUserId !== undefined ? { assignedUserId: data.assignedUserId || null } : {}),
         ...(data.notes !== undefined ? { notes: data.notes || null } : {}),
+        ...(data.tags !== undefined ? { tags: data.tags.length ? JSON.stringify(data.tags) : null } : {}),
         ...(data.customFields !== undefined
           ? { customFields: data.customFields ? JSON.stringify(data.customFields) : null }
           : {}),
@@ -343,6 +362,7 @@ function serializeLead(lead: any) {
     assignedUserId: lead.assignedUserId,
     assignedUser: lead.assignedUser ?? undefined,
     notes: lead.notes,
+    tags: parseJson<string[]>(lead.tags) ?? [],
     customFields: parseJson(lead.customFields),
     lastActivityAt: lead.lastActivityAt,
     createdAt: lead.createdAt,

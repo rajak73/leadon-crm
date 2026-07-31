@@ -64,6 +64,9 @@ model Organization {
   notifications  Notification[]
   auditLogs      AuditLog[]
   savedViews     SavedView[]
+  followUpRules      FollowUpRule[]
+  followUpExecutions FollowUpExecution[]
+  autoReplyRules     AutoReplyRule[]
 }
 
 model OrganizationMember {
@@ -95,6 +98,7 @@ model Lead {
   score          Int      @default(0)
   assignedUserId String?
   notes          String?
+  tags           String?  // JSON string array, e.g. ["vip","instagram"]
   customFields   String?  // JSON string (SQLite). captureState lives here (BRD §12)
   lastActivityAt DateTime?
   createdAt      DateTime @default(now())
@@ -218,8 +222,10 @@ model Conversation {
   id             String   @id @default(cuid())
   organizationId String
   channel        String   @default("INTERNAL") // BRD §10.10
+  type           String   @default("DM")        // DM | COMMENT
   externalId     String?
   customerName   String?
+  unreadCount    Int      @default(0)
   leadId         String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -227,10 +233,12 @@ model Conversation {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lead         Lead?        @relation(fields: [leadId], references: [id])
   messages     Message[]
+  followUpExecutions FollowUpExecution[]
 
   @@index([organizationId])
   @@index([organizationId, updatedAt])
   @@index([organizationId, channel, externalId])
+  @@index([organizationId, channel, type, externalId])
 }
 
 model Message {
@@ -238,9 +246,12 @@ model Message {
   organizationId String
   conversationId String
   direction      String   // INBOUND | OUTBOUND
+  type           String   @default("DM") // DM | COMMENT
   body           String
   status         String   @default("RECEIVED") // RECEIVED | QUEUED | SENT | FAILED
   isSimulation   Boolean  @default(false)       // BRD §11.3
+  externalId     String?  // Meta message/comment id — real idempotency key
+  mediaId        String?  // IG post/media id (comments only)
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -248,6 +259,7 @@ model Message {
 
   @@index([conversationId])
   @@index([organizationId])
+  @@index([conversationId, externalId])
 }
 
 model Activity {
@@ -301,14 +313,18 @@ model WebhookEvent {
 }
 
 model IntegrationAccount {
-  id             String   @id @default(cuid())
-  organizationId String
-  provider       String   // INSTAGRAM | WHATSAPP | FACEBOOK
-  externalId     String?  // business phone-number id / page id / ig account id
-  displayName    String?
-  accessToken    String?  // per-account page/access token (encrypt at rest in prod)
-  isConnected    Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  id                String   @id @default(cuid())
+  organizationId    String
+  provider          String   // INSTAGRAM | WHATSAPP | FACEBOOK
+  externalId        String?  // business phone-number id / page id / ig business account id
+  pageId            String?  // Facebook Page id the IG business account is linked to
+  igUserId          String?  // Instagram-scoped business account id
+  displayName       String?
+  accessToken       String?  // per-account page/access token, encrypted at rest (lib/crypto)
+  tokenExpiresAt    DateTime? // long-lived token expiry, used by the refresh job
+  webhookSubscribed Boolean  @default(false)
+  isConnected       Boolean  @default(false)
+  createdAt         DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -355,6 +371,72 @@ model SavedView {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, userId, resource])
+}
+
+// ---------------------------------------------------------------------------
+// Follow-up sequence automation (Instagram MVP) — "no reply in Xh → send a
+// predefined message" rules, reusing the existing outbound send pipeline.
+// ---------------------------------------------------------------------------
+
+model FollowUpRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  delayHours     Int      @default(24)
+  template       String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  executions   FollowUpExecution[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model FollowUpExecution {
+  id             String   @id @default(cuid())
+  organizationId String
+  ruleId         String
+  conversationId String
+  leadId         String?
+  status         String   // SENT | FAILED | SKIPPED
+  detail         String?
+  createdAt      DateTime @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rule         FollowUpRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([ruleId])
+  @@index([conversationId])
+}
+
+// ---------------------------------------------------------------------------
+// Auto-reply rules engine — admin-defined "if inbound text matches keyword →
+// send a canned reply / hand off to a human" (Instagram MVP Step 7).
+// ---------------------------------------------------------------------------
+
+model AutoReplyRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  keyword        String
+  matchType      String   @default("CONTAINS") // CONTAINS | STARTS_WITH | ENDS_WITH | EXACT
+  caseInsensitive Boolean @default(true)
+  action         String   @default("REPLY")    // REPLY | ASSIGN_HUMAN
+  replyTemplate  String?                        // required when action = REPLY
+  priority       Int      @default(0)           // lower = evaluated first
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, isActive, priority])
 }
 
 model AuditLog {

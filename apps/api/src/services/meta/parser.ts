@@ -11,10 +11,12 @@
  */
 export interface ParsedInbound {
   channel: 'INSTAGRAM' | 'WHATSAPP' | 'FACEBOOK';
+  kind: 'message' | 'comment';
   senderId: string;
   senderName?: string;
   text: string;
   messageId?: string;
+  mediaId?: string; // IG post/media id the comment was left on (comments only)
   recipientExternalId?: string; // business phone-number id / page id / ig id
 }
 
@@ -37,6 +39,7 @@ export function parseMetaPayload(body: any): ParsedInbound[] {
           if (!text) continue;
           out.push({
             channel: 'WHATSAPP',
+            kind: 'message',
             senderId: msg.from,
             senderName: contactName,
             text,
@@ -56,10 +59,33 @@ export function parseMetaPayload(body: any): ParsedInbound[] {
         if (!text || m.message?.is_echo) continue; // skip echoes of our own sends
         out.push({
           channel,
+          kind: 'message',
           senderId: m.sender?.id,
           text,
           messageId: m.message?.mid,
           recipientExternalId,
+        });
+      }
+    }
+
+    // ---- Instagram comments ----
+    if (Array.isArray(entry.changes)) {
+      for (const change of entry.changes) {
+        if (change.field !== 'comments') continue;
+        const value = change.value;
+        const text: string = value?.text ?? '';
+        if (!text || !value?.id || !value?.from?.id) continue;
+        // Skip echoes of our own replies (Meta tags them, but be defensive).
+        if (value.from?.id === entry.id) continue;
+        out.push({
+          channel: 'INSTAGRAM',
+          kind: 'comment',
+          senderId: value.from.id,
+          senderName: value.from.username,
+          text,
+          messageId: value.id,
+          mediaId: value.media?.id,
+          recipientExternalId: entry.id, // ig business account id
         });
       }
     }

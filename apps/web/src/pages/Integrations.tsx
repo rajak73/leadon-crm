@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Card, Badge, Loading, Empty, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -8,17 +9,23 @@ interface Account {
   isConnected: boolean; hasAccessToken: boolean;
 }
 interface Platform {
-  instagram: boolean; whatsapp: boolean; facebook: boolean;
+  instagram: boolean; instagramOAuthConfigured: boolean; whatsapp: boolean; facebook: boolean;
   webhookVerifyTokenSet: boolean; appSecretSet: boolean;
 }
+interface EligiblePage { pageId: string; pageName: string; igUsername?: string; igUserId: string; }
 
 export default function Integrations() {
   const { currentOrg } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showNew, setShowNew] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [banner, setBanner] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const canManage = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN';
+
+  const igAccount = accounts.find((a) => a.provider === 'INSTAGRAM' && a.isConnected);
+  const pickToken = searchParams.get('pick');
 
   async function load() {
     setLoading(true);
@@ -29,24 +36,33 @@ export default function Integrations() {
   }
   useEffect(() => { load(); }, []);
 
+  // Handle the OAuth callback's redirect back into the app.
+  useEffect(() => {
+    if (searchParams.get('connected')) {
+      setBanner({ kind: 'ok', text: 'Instagram account connected.' });
+      setSearchParams({}, { replace: true });
+      load();
+    } else if (searchParams.get('error')) {
+      setBanner({ kind: 'error', text: `Connection failed: ${searchParams.get('error')}` });
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function connectInstagram() {
+    setConnecting(true);
+    try {
+      const r = await api.get<{ authUrl: string }>('/api/v1/integrations/instagram/connect');
+      window.location.href = r.authUrl;
+    } catch (e: any) {
+      setBanner({ kind: 'error', text: e.message });
+      setConnecting(false);
+    }
+  }
+
   async function disconnect(id: string) {
     await api.post(`/api/v1/integrations/${id}/disconnect`, {});
     load();
-  }
-
-  const [cal, setCal] = useState<{ configured: boolean; connected: boolean; mode: string } | null>(null);
-  async function loadCal() {
-    try { setCal(await api.get('/api/v1/calendar/status')); } catch { /* noop */ }
-  }
-  useEffect(() => { loadCal(); }, []);
-  async function connectCal() {
-    const r = await api.get<{ mode: string; authUrl?: string }>('/api/v1/calendar/connect');
-    if (r.authUrl) window.location.href = r.authUrl; // real Google OAuth
-    else loadCal(); // mock connected
-  }
-  async function disconnectCal() {
-    await api.post('/api/v1/calendar/disconnect', {});
-    loadCal();
   }
 
   const webhookUrl = `${import.meta.env.VITE_API_URL || ''}/api/v1/webhooks/meta`;
@@ -55,107 +71,86 @@ export default function Integrations() {
     <div>
       <div className="row between">
         <div>
-          <div className="h1">Integrations</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Connect Instagram, WhatsApp & Facebook (BRD §16).</p>
+          <div className="h1">Instagram Integration</div>
+          <p className="subtle" style={{ marginTop: 0 }}>Connect your Instagram Business Account to receive DMs and comments.</p>
         </div>
-        {canManage && <button className="btn primary" onClick={() => setShowNew(true)}>+ Connect account</button>}
+        {canManage && !igAccount && platform?.instagramOAuthConfigured && (
+          <button className="btn primary" onClick={connectInstagram} disabled={connecting}>
+            {connecting ? 'Redirecting…' : 'Connect Instagram'}
+          </button>
+        )}
       </div>
 
-      {platform && (
-        <Card title="Platform status">
-          <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
-            <Badge value={platform.appSecretSet ? 'App secret set' : 'App secret missing'} />
-            <Badge value={platform.webhookVerifyTokenSet ? 'Verify token set' : 'Verify token missing'} />
-            <span className="badge gray">WhatsApp creds: {platform.whatsapp ? 'yes' : 'no'}</span>
-            <span className="badge gray">Instagram creds: {platform.instagram ? 'yes' : 'no'}</span>
-          </div>
-          <div className="hint mt16">
+      {banner && (
+        <div className={`hint ${banner.kind === 'error' ? 'error' : ''}`} style={{ marginTop: 8 }}>{banner.text}</div>
+      )}
+
+      {platform && !platform.instagramOAuthConfigured && (
+        <Card title="Setup required">
+          <p className="hint">
+            Instagram OAuth isn't configured yet. Set <code>INSTAGRAM_APP_ID</code>, <code>INSTAGRAM_APP_SECRET</code>,{' '}
+            <code>INSTAGRAM_OAUTH_REDIRECT_URI</code>, <code>META_APP_SECRET</code>, and <code>META_WEBHOOK_VERIFY_TOKEN</code> in the API
+            environment, then reload this page.
+          </p>
+          <div className="hint mt8">
             Webhook callback URL (set this in your Meta App): <code>{webhookUrl}</code>
           </div>
-          {!platform.appSecretSet && (
-            <div className="hint">
-              Real sends & inbound events are disabled until <code>META_APP_SECRET</code> and channel
-              credentials are set in the API environment. Simulation mode still works.
-            </div>
-          )}
         </Card>
       )}
 
       <div className="mt16">
-        <Card title="Calendar (Google)">
-          <div className="row between">
-            <div>
-              <div>{cal?.connected ? <Badge value="active" /> : <Badge value="gray" />} {cal?.connected ? 'Connected' : 'Not connected'}
-                {cal && <span className="badge gray" style={{ marginLeft: 8 }}>mode: {cal.mode}</span>}</div>
-              <div className="hint mt8">Tasks with a due date create a calendar event. {cal && !cal.configured && 'Runs in mock mode until Google credentials are configured server-side.'}</div>
+        <Card title="Connected account">
+          {loading ? <Loading /> : !igAccount ? (
+            <Empty text="No Instagram account connected yet." />
+          ) : (
+            <div className="row between">
+              <div>
+                <div><strong>@{igAccount.displayName || igAccount.externalId}</strong> <Badge value="active" /></div>
+                <div className="subtle" style={{ fontSize: 13 }}>IG business account id: {igAccount.externalId}</div>
+              </div>
+              {canManage && <button className="btn sm outline" onClick={() => disconnect(igAccount.id)}>Disconnect</button>}
             </div>
-            {canManage && (cal?.connected
-              ? <button className="btn outline" onClick={disconnectCal}>Disconnect</button>
-              : <button className="btn primary" onClick={connectCal}>Connect calendar</button>)}
-          </div>
-        </Card>
-      </div>
-
-      <div className="mt16">
-        <Card title="Connected accounts">
-          {loading ? <Loading /> : accounts.length === 0 ? <Empty text="No accounts connected yet." /> : (
-            <table className="table">
-              <thead><tr><th>Provider</th><th>Account ID</th><th>Name</th><th>Status</th><th></th></tr></thead>
-              <tbody>
-                {accounts.map((a) => (
-                  <tr key={a.id}>
-                    <td><Badge value={a.provider} /></td>
-                    <td className="subtle">{a.externalId}</td>
-                    <td>{a.displayName || '—'}</td>
-                    <td><Badge value={a.isConnected ? 'active' : 'gray'} /> {a.hasAccessToken ? <span className="badge gray">token ✓</span> : null}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {canManage && a.isConnected && <button className="btn sm outline" onClick={() => disconnect(a.id)}>Disconnect</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           )}
         </Card>
       </div>
 
-      {showNew && <ConnectForm onClose={() => setShowNew(false)} onDone={() => { setShowNew(false); load(); }} />}
+      {pickToken && <PagePicker pickToken={pickToken} onDone={() => { setSearchParams({}, { replace: true }); load(); }} onCancel={() => setSearchParams({}, { replace: true })} />}
     </div>
   );
 }
 
-function ConnectForm({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ provider: 'WHATSAPP', externalId: '', displayName: '', accessToken: '' });
+function PagePicker({ pickToken, onDone, onCancel }: { pickToken: string; onDone: () => void; onCancel: () => void }) {
+  // The pages list travels inside the signed pickToken server-side; we only
+  // need the org to choose a pageId and POST it back for the server to
+  // re-derive from that same token (never exposed to the client directly).
+  const [pageId, setPageId] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setErr('');
-    try { await api.post('/api/v1/integrations/connect', form); onDone(); }
-    catch (e: any) { setErr(e.message); setBusy(false); }
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      await api.post('/api/v1/integrations/instagram/select', { pickToken, pageId });
+      onDone();
+    } catch (e: any) {
+      setErr(e.message); setBusy(false);
+    }
   }
+
   return (
-    <Modal title="Connect account" onClose={onClose}>
+    <Modal title="Select a Facebook Page" onClose={onCancel}>
       <form onSubmit={submit}>
-        <div className="field"><label>Provider</label>
-          <select className="select" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })}>
-            <option value="WHATSAPP">WhatsApp</option>
-            <option value="INSTAGRAM">Instagram</option>
-            <option value="FACEBOOK">Facebook</option>
-          </select>
+        <div className="hint" style={{ marginBottom: 10 }}>
+          Multiple Pages with a linked Instagram Business Account were found. Enter the Page id to connect
+          (shown in the Meta OAuth consent screen).
         </div>
-        <div className="field"><label>Account ID (phone-number id / page id / IG id)</label>
-          <input className="input" value={form.externalId} onChange={(e) => setForm({ ...form, externalId: e.target.value })} required />
-          <div className="hint">This is used to map incoming Meta webhooks to your workspace.</div>
-        </div>
-        <div className="field"><label>Display name (optional)</label>
-          <input className="input" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
-        </div>
-        <div className="field"><label>Access token (optional, for real replies)</label>
-          <input className="input" type="password" value={form.accessToken} onChange={(e) => setForm({ ...form, accessToken: e.target.value })} />
-          <div className="hint">Stored server-side and never shown again.</div>
+        <div className="field">
+          <label>Facebook Page ID</label>
+          <input className="input" value={pageId} onChange={(e) => setPageId(e.target.value)} required />
         </div>
         {err && <div className="error">{err}</div>}
-        <button className="btn primary block mt8" disabled={busy}>{busy ? 'Connecting…' : 'Connect'}</button>
+        <button className="btn primary block mt8" disabled={busy || !pageId}>{busy ? 'Connecting…' : 'Connect this Page'}</button>
       </form>
     </Modal>
   );
