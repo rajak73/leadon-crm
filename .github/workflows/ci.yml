@@ -58,3 +58,5 @@ jobs:
 
       - name: Run E2E tests
         run: pnpm --filter @leados/web e2e
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leados_test

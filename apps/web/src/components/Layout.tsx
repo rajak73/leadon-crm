@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { useI18n, LOCALES, type Locale } from '../lib/i18n';
@@ -56,7 +57,19 @@ export function Layout({ children }: { children: ReactNode }) {
         </NavLink>
       )}
       <div className="spacer" />
-      <button className="btn outline block" onClick={() => { logout(); navigate('/'); }}>
+      <button
+        className="btn outline block"
+        onClick={() => {
+          // logout()'s state update renders Protected while still matched to
+          // the current /app/* route, so its guard replaces history with
+          // /login before this handler's navigate('/') call would otherwise
+          // run — flushSync forces that redirect to happen synchronously
+          // first, so the explicit navigate('/') below is guaranteed to be
+          // the LAST history entry (landing on the public marketing page).
+          flushSync(() => logout());
+          navigate('/', { replace: true });
+        }}
+      >
         {t('action.signOut')}
       </button>
     </>

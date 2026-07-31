@@ -1,14 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
+import { E2E_DATABASE_URL } from './e2e/db.js';
 
 /**
- * E2E config. Boots the API (on an isolated e2e SQLite DB) and the web dev
- * server, then runs browser flows against them. The API DB is prepared by the
- * global setup script.
+ * E2E config. Boots the API (on an isolated e2e Postgres DB — schema.prisma's
+ * provider is "postgresql") and the web dev server, then runs browser flows
+ * against them. The API DB is prepared by the global setup script.
  */
 const WEB_PORT = 5199;
 const API_PORT = 4099;
 const apiEnv = {
-  DATABASE_URL: 'file:./e2e.db',
+  DATABASE_URL: E2E_DATABASE_URL,
   NODE_ENV: 'development',
   JWT_SECRET: 'e2e-secret-1234567890',
   CRON_SECRET: 'e2e-cron',
@@ -31,7 +32,7 @@ export default defineConfig({
   webServer: [
     {
       // API server on an isolated DB (prepared by e2e/global-setup).
-      command: 'sh -c "cd ../api && DATABASE_URL=file:./e2e.db npx tsx src/index.ts"',
+      command: 'sh -c "cd ../api && npx tsx src/index.ts"',
       port: API_PORT,
       reuseExistingServer: false,
       timeout: 60_000,
