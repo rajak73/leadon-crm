@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Pencil, ListChecks, Clock, Activity as ActivityIcon, Briefcase } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Loading, Empty, Badge, money } from '../components/ui';
+import { Card, Empty, EmptyState, Skeleton, SkeletonRows, Badge, money } from '../components/ui';
 
 interface Customer360 {
   identity: { id: string; name: string; email?: string | null; phone?: string | null; company?: string | null; source?: string | null; notes?: string | null; createdAt: string };
@@ -51,7 +52,20 @@ export default function Customer360Page() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!data) return <Loading />;
+
+  if (!data) {
+    return (
+      <div>
+        <Link to="/app/contacts" className="subtle">← Contacts</Link>
+        <div className="mt8"><Skeleton width="30%" height={22} /></div>
+        <div className="grid grid-3 mt16">
+          <Card title="Identity"><SkeletonRows rows={3} /></Card>
+          <Card title="Next Action"><SkeletonRows rows={1} /></Card>
+          <Card title="Deals"><SkeletonRows rows={2} /></Card>
+        </div>
+      </div>
+    );
+  }
   const c = data.identity;
 
   return (
@@ -59,10 +73,10 @@ export default function Customer360Page() {
       <Link to="/app/contacts" className="subtle">← Contacts</Link>
       <div className="row between mt8">
         <div>
-          <div className="h1" style={{ marginBottom: 2 }}>{c.name}</div>
+          <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{c.name}</div>
           <p className="subtle" style={{ margin: 0 }}>{c.company || 'Customer 360 profile'}</p>
         </div>
-        {!editing && <button className="btn outline" onClick={startEdit}>✏️ Edit</button>}
+        {!editing && <button className="btn outline" onClick={startEdit}><Pencil size={14} /> Edit</button>}
       </div>
 
       <div className="grid grid-3 mt16">
@@ -95,10 +109,12 @@ export default function Customer360Page() {
               <div><strong>{data.nextAction.title}</strong></div>
               {data.nextAction.dueDate && <div className="subtle mt8">Due {new Date(data.nextAction.dueDate).toLocaleDateString()}</div>}
             </div>
-          ) : <Empty text="No open tasks" />}
+          ) : <EmptyState icon={Clock} title="No open tasks" />}
         </Card>
         <Card title="Deals">
-          {data.deals.length === 0 ? <Empty text="No deals" /> : data.deals.map((d) => (
+          {data.deals.length === 0 ? (
+            <EmptyState icon={Briefcase} title="No deals" description="Deals linked to this contact will show up here." />
+          ) : data.deals.map((d) => (
             <div key={d.id} className="row between mt8">
               <Link to={`/app/deals/${d.id}`} style={{ color: 'var(--primary)' }}>{d.title}</Link><span className="subtle">{money(d.value)}</span>
             </div>
@@ -108,7 +124,9 @@ export default function Customer360Page() {
 
       <div className="grid grid-2 mt16">
         <Card title="Tasks">
-          {data.tasks.length === 0 ? <Empty text="No tasks" /> : (
+          {data.tasks.length === 0 ? (
+            <EmptyState icon={ListChecks} title="No tasks" description="Tasks linked to this contact will show up here." />
+          ) : (
             <table className="table">
               <tbody>
                 {data.tasks.map((t) => (
@@ -126,7 +144,9 @@ export default function Customer360Page() {
               <button className="btn primary" onClick={addNote} disabled={busy || !note.trim()}>Add</button>
             </div>
           </div>
-          {data.timeline.length === 0 ? <Empty text="No activity" /> : data.timeline.map((a) => (
+          {data.timeline.length === 0 ? (
+            <EmptyState icon={ActivityIcon} title="No activity" description="Notes and status changes will show up here." />
+          ) : data.timeline.map((a) => (
             <div key={a.id} className="mt8" style={{ paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
               <span className="badge gray">{a.type.replace(/_/g, ' ')}</span> {a.message}
               <div className="subtle" style={{ fontSize: 12 }}>{new Date(a.createdAt).toLocaleString()}</div>

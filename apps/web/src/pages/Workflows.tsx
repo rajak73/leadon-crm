@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Cog } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, Modal } from '../components/ui';
+import { Card, Badge, EmptyState, Skeleton, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { LEAD_STATUSES } from '@leados/shared';
 
@@ -34,16 +35,37 @@ export default function Workflows() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Workflows</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Automate follow-ups with trigger → action rules.</p>
+          <div className="text-display">Workflows</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Automate follow-ups with trigger → action rules.</p>
         </div>
         {canManage && <button className="btn primary" onClick={() => setShowNew(true)}>+ New Workflow</button>}
       </div>
 
       <div className="card card-pad mt16">
-        {loading ? <Loading /> : items.length === 0 ? <Empty text="No workflows yet. Create one to auto-create tasks when a lead changes stage." /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <tr key={i}>
+                  <td><Skeleton width="50%" height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width="60%" height={13} /></td>
+                  <td><Skeleton width={60} height={20} radius={999} /></td>
+                  <td />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : items.length === 0 ? (
+          <EmptyState
+            icon={Cog}
+            title="No workflows yet"
+            description="Create one to auto-create tasks when a lead changes stage."
+            action={canManage ? <button className="btn primary sm" onClick={() => setShowNew(true)}>+ New Workflow</button> : undefined}
+          />
+        ) : (
           <table className="table">
             <thead><tr><th>Name</th><th>When</th><th>Then</th><th>Status</th><th></th></tr></thead>
             <tbody>

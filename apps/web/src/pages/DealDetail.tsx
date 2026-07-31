@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Pencil, ListChecks, Activity as ActivityIcon } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, Badge, Loading, Empty, money } from '../components/ui';
+import { Card, Badge, Empty, EmptyState, Skeleton, SkeletonRows, money } from '../components/ui';
 
 interface Stage { id: string; name: string; key: string }
 interface Deal {
@@ -61,7 +62,22 @@ export default function DealDetail() {
   }
 
   if (err) return <Empty text={err} />;
-  if (!deal) return <Loading />;
+
+  if (!deal) {
+    return (
+      <div>
+        <Link to="/app/pipeline" className="subtle">← Pipeline</Link>
+        <div className="row mt8" style={{ gap: 8 }}>
+          <Skeleton width="30%" height={22} />
+        </div>
+        <div className="grid grid-3 mt16">
+          <Card title="Deal"><SkeletonRows rows={3} /></Card>
+          <Card title="Related"><SkeletonRows rows={3} /></Card>
+          <Card title="Tasks"><SkeletonRows rows={2} /></Card>
+        </div>
+      </div>
+    );
+  }
   const stages = deal.pipeline?.stages ?? [];
 
   return (
@@ -69,14 +85,14 @@ export default function DealDetail() {
       <Link to="/app/pipeline" className="subtle">← Pipeline</Link>
       <div className="row between mt8">
         <div>
-          <div className="h1" style={{ marginBottom: 2 }}>{deal.title}</div>
+          <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{deal.title}</div>
           <div className="row" style={{ gap: 8 }}>
             <Badge value={deal.status} />
             {deal.stage && <Badge value={deal.stage.name} />}
             <span className="subtle">{money(deal.value)} · {deal.probability}%</span>
           </div>
         </div>
-        {!editing && <button className="btn outline" onClick={startEdit}>✏️ Edit</button>}
+        {!editing && <button className="btn outline" onClick={startEdit}><Pencil size={14} /> Edit</button>}
       </div>
 
       <div className="grid grid-3 mt16">
@@ -116,7 +132,9 @@ export default function DealDetail() {
         </Card>
 
         <Card title={`Tasks (${deal.tasks.length})`}>
-          {deal.tasks.length === 0 ? <Empty text="No tasks" /> : deal.tasks.map((t) => (
+          {deal.tasks.length === 0 ? (
+            <EmptyState icon={ListChecks} title="No tasks" description="Tasks linked to this deal will show up here." />
+          ) : deal.tasks.map((t) => (
             <div key={t.id} className="row between mt8"><span>{t.title}</span><Badge value={t.status} /></div>
           ))}
         </Card>
@@ -124,7 +142,9 @@ export default function DealDetail() {
 
       <div className="mt16">
         <Card title="Related Activity">
-          {deal.activities.length === 0 ? <Empty text="No related activity." /> : deal.activities.map((a) => (
+          {deal.activities.length === 0 ? (
+            <EmptyState icon={ActivityIcon} title="No related activity" description="Status changes and events for this deal will show up here." />
+          ) : deal.activities.map((a) => (
             <div key={a.id} className="row" style={{ gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <span className="badge gray">{a.type.replace(/_/g, ' ')}</span>
               <div><div style={{ fontSize: 14 }}>{a.message}</div><div className="subtle" style={{ fontSize: 12 }}>{new Date(a.createdAt).toLocaleString()}</div></div>

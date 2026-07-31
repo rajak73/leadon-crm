@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Star, ListChecks } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Badge, Loading, Empty, Modal } from '../components/ui';
+import { Badge, EmptyState, Skeleton, Modal } from '../components/ui';
 import { TaskStatus, TaskPriority } from '@leados/shared';
 
 interface Task { id: string; title: string; status: string; priority: string; dueDate?: string | null; assignedUser?: { firstName: string; lastName: string } | null; }
@@ -46,17 +47,17 @@ export default function Tasks() {
 
   return (
     <div>
-      <div className="row between">
+      <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="h1">Tasks & Follow-ups</div>
-          <p className="subtle" style={{ marginTop: 0 }}>Never miss a follow-up.</p>
+          <div className="text-display">Tasks & Follow-ups</div>
+          <p className="subtle" style={{ marginTop: 4 }}>Never miss a follow-up.</p>
         </div>
         <button className="btn primary" onClick={() => setShowNew(true)}>+ New Task</button>
       </div>
 
       <div className="card card-pad mt16">
         <div className="row" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <button className="btn sm outline" onClick={myOpenTasks}>⭐ My open tasks</button>
+          <button className="btn sm outline" onClick={myOpenTasks}><Star size={14} /> My open tasks</button>
           <select className="select sm" style={{ maxWidth: 170 }} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status filter">
             <option value="">All statuses</option>
             {Object.values(TaskStatus).map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -70,7 +71,29 @@ export default function Tasks() {
           {(status || assignee) && <button className="btn sm" onClick={() => { setStatus(''); setAssignee(''); }}>Clear</button>}
         </div>
 
-        {loading ? <Loading /> : tasks.length === 0 ? <Empty text="No tasks yet." /> : (
+        {loading ? (
+          <table className="table">
+            <tbody>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <tr key={i}>
+                  <td style={{ width: 30 }}><Skeleton width={14} height={14} radius={4} /></td>
+                  <td><Skeleton width="55%" height={13} /></td>
+                  <td><Skeleton width="40%" height={13} /></td>
+                  <td><Skeleton width={60} height={20} radius={999} /></td>
+                  <td><Skeleton width="50%" height={13} /></td>
+                  <td><Skeleton width={60} height={20} radius={999} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            icon={ListChecks}
+            title="No tasks yet"
+            description="Tasks you create manually or via Workflows will show up here."
+            action={<button className="btn primary sm" onClick={() => setShowNew(true)}>+ New Task</button>}
+          />
+        ) : (
           <table className="table">
             <thead><tr><th></th><th>Title</th><th>Assignee</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead>
             <tbody>
