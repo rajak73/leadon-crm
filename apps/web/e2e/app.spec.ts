@@ -84,7 +84,7 @@ test('open a deal detail page from the pipeline', async ({ page }) => {
 test('contact detail: add a note to the timeline', async ({ page }) => {
   await signup(page);
   await page.goto('/app/contacts');
-  await page.getByRole('button', { name: /New Contact/ }).click();
+  await page.getByRole('button', { name: /New Contact/ }).first().click();
   await page.getByLabel('Name', { exact: true }).fill('Timeline Contact');
   await page.getByRole('button', { name: /Create Contact/ }).click();
   await page.getByRole('link', { name: /Customer 360/ }).first().click();
