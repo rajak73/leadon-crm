@@ -19,13 +19,16 @@ const listQuery = paginationSchema.extend({
   source: z.enum(LEAD_SOURCES as [string, ...string[]]).optional(),
   assignedUserId: z.string().optional(),
   q: z.string().trim().optional(),
+  minScore: z.coerce.number().int().min(0).max(100).optional(),
+  sort: z.enum(['createdAt', 'score']).default('createdAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
 });
 
 /** GET /api/v1/leads */
 router.get(
   '/',
   asyncHandler(async (req: AuthedRequest, res) => {
-    const { page, pageSize, status, source, assignedUserId, q } = listQuery.parse(req.query);
+    const { page, pageSize, status, source, assignedUserId, q, minScore, sort, order } = listQuery.parse(req.query);
     const where: Record<string, unknown> = { organizationId: req.org!.organizationId };
     // Role scoping (BRD §9.5/§9.6): Sales Agents & Support Agents see only
     // leads assigned to them; managers/admins/owners see all org leads.
@@ -35,6 +38,7 @@ router.get(
     }
     if (status) where.status = status;
     if (source) where.source = source;
+    if (minScore !== undefined) where.score = { gte: minScore };
     // "none" = unassigned; otherwise filter by the given user (managers only —
     // agents are already locked to their own leads above).
     if (assignedUserId && !(role === 'SALES_AGENT' || role === 'SUPPORT_AGENT')) {
@@ -46,7 +50,7 @@ router.get(
       prisma.lead.count({ where }),
       prisma.lead.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sort]: order },
         ...paginate(page, pageSize),
         include: {
           assignedUser: { select: { id: true, firstName: true, lastName: true } },

@@ -38,6 +38,7 @@ export default function Leads() {
   const [scoring, setScoring] = useState(false);
   const [source, setSource] = useState('');
   const [assignee, setAssignee] = useState('');
+  const [sort, setSort] = useState<'createdAt' | 'score'>('createdAt');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [views, setViews] = useState<{ id: string; name: string; filters: any }[]>([]);
   const [members, setMembers] = useState<{ userId: string; firstName: string; lastName: string }[]>([]);
@@ -139,13 +140,14 @@ export default function Leads() {
     if (assignee === '__unassigned__') params.set('assignedUserId', 'none');
     else if (assignee) params.set('assignedUserId', assignee);
     if (q) params.set('q', q);
+    params.set('sort', sort);
     params.set('pageSize', '100');
     const r = await api.get<{ leads: Lead[] }>(`/api/v1/leads?${params}`);
     setLeads(r.leads);
     setLoading(false);
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status, source, assignee]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status, source, assignee, sort]);
   useEffect(() => { loadViews(); /* eslint-disable-next-line */ }, []);
   useEffect(() => {
     api.get<{ userId: string; firstName: string; lastName: string }[]>('/api/v1/organizations/members')
@@ -212,6 +214,10 @@ export default function Leads() {
             {user && <option value={user.id}>My leads</option>}
             <option value="__unassigned__">Unassigned</option>
             {members.filter((m) => m.userId !== user?.id).map((m) => <option key={m.userId} value={m.userId}>{m.firstName} {m.lastName}</option>)}
+          </select>
+          <select className="select" style={{ maxWidth: 170 }} value={sort} onChange={(e) => setSort(e.target.value as 'createdAt' | 'score')} aria-label="Sort by">
+            <option value="createdAt">Sort: Newest first</option>
+            <option value="score">Sort: Highest score first</option>
           </select>
           <button className="btn outline" onClick={load}>{t('common.search')}</button>
           <button className="btn outline" onClick={saveView} title="Save current filters as a view"><Save size={14} /> Save view</button>
