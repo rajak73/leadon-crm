@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, MessageCircle, ShieldCheck } from 'lucide-react';
+import {
+  Sparkles, MessageCircle, ShieldCheck, Check, X as XIcon, Send, AtSign, Target, Clock,
+  ChevronDown, Rocket, PartyPopper, Zap,
+} from 'lucide-react';
 
 const DEMO_SCRIPT = [
   { dir: 'in', text: 'Hi! Do you have this in size M?' },
@@ -57,6 +60,45 @@ function AnimatedInboxDemo() {
             <div className="mc-mockup-bubble out mk-typing"><span /><span /><span /></div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const CHECKLIST_ITEMS = [
+  { icon: Send, label: 'Send links', active: false },
+  { icon: AtSign, label: 'Reply to comments', active: false },
+  { icon: MessageCircle, label: 'Reply to DMs', active: true },
+  { icon: Target, label: 'Capture leads', active: false },
+];
+
+/** Original illustrated panel — no stock photo of a stranger standing in as
+ * a fake customer. A soft gradient card with a rotating spotlight on the
+ * "Reply to DMs" checklist item and a floating chat bubble pair, giving the
+ * same "automatically doing things for you" feeling with 100% original
+ * shapes/icons instead of borrowed photography. */
+function AutomaticallyPanel() {
+  const [active, setActive] = useState(2);
+  useEffect(() => {
+    const id = setInterval(() => setActive((a) => (a + 1) % CHECKLIST_ITEMS.length), 1800);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="mc-illustration">
+      <div className="mc-illustration-glow" />
+      <div className="mc-illustration-icon"><Zap size={40} /></div>
+      <div className="mc-illustration-chip mc-illustration-chip-1">
+        <MessageCircle size={14} /> DM answered
+      </div>
+      <div className="mc-illustration-chip mc-illustration-chip-2">
+        <Target size={14} /> Lead captured
+      </div>
+      <div className="mc-illustration-list">
+        {CHECKLIST_ITEMS.map((item, i) => (
+          <div key={item.label} className={`mc-illustration-row ${i === active ? 'active' : ''}`}>
+            <item.icon size={16} /> {item.label}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -135,6 +177,61 @@ export default function Marketing() {
         </div>
       </section>
 
+      {/* Automatically checklist */}
+      <section className="mc-white-section" style={{ padding: '80px 20px' }}>
+        <div className="mc-auto-layout">
+          <div className="mc-auto-copy">
+            <span className="text-overline" style={{ color: 'var(--muted)' }}>Automatically</span>
+            <div className="mc-auto-list">
+              {CHECKLIST_ITEMS.map((item) => (
+                <div key={item.label} className="mc-auto-item">
+                  <Check size={18} /> {item.label}
+                </div>
+              ))}
+            </div>
+          </div>
+          <AutomaticallyPanel />
+        </div>
+      </section>
+
+      {/* Before / After */}
+      <section className="mk-section">
+        <div className="grid grid-2 mk-baf">
+          <div className="card card-pad mk-baf-card mk-baf-before">
+            <span className="text-overline">Before LeadOS:</span>
+            <div className="mk-baf-heading">All work<br />and no play</div>
+            {[
+              'Copy-pasting the same reply 417 times.',
+              'Losing hot leads in endless DMs.',
+              'Missed sales while you sleep.',
+              'Every comment buries you deeper.',
+            ].map((t) => (
+              <div key={t} className="row mt16" style={{ gap: 10, alignItems: 'flex-start' }}>
+                <XIcon size={16} style={{ color: 'var(--danger-text)', flexShrink: 0, marginTop: 2 }} />
+                <span>{t}</span>
+              </div>
+            ))}
+            <Link to="/signup" className="btn block mt16" style={{ background: '#111', color: '#fff', borderRadius: 99 }}>Get Started</Link>
+          </div>
+          <div className="card card-pad mk-baf-card mk-baf-after">
+            <span className="text-overline" style={{ color: 'rgba(255,255,255,.75)' }}>After LeadOS:</span>
+            <div className="mk-baf-heading" style={{ color: '#fff' }}>Less grind and<br />more pay</div>
+            {[
+              'Smart replies handle FAQs instantly.',
+              'Organized, tagged, scored leads.',
+              'Sales go out 24/7 — even asleep.',
+              'Every comment is a chance to convert.',
+            ].map((t) => (
+              <div key={t} className="row mt16" style={{ gap: 10, alignItems: 'flex-start' }}>
+                <Check size={16} style={{ color: '#fff', flexShrink: 0, marginTop: 2 }} />
+                <span>{t}</span>
+              </div>
+            ))}
+            <Link to="/signup" className="btn white-solid-pill block mt16">Get Started</Link>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="mk-section">
         <div className="h1" style={{ textAlign: 'center', marginBottom: 40, fontSize: 40, fontWeight: 900, letterSpacing: '-0.02em' }}>
@@ -157,6 +254,63 @@ export default function Marketing() {
         </div>
       </section>
 
+      {/* New to automation? */}
+      <section className="mc-white-section" style={{ padding: '80px 20px' }}>
+        <div className="mc-onboard-ic"><Rocket size={40} /></div>
+        <h2 style={{ fontSize: 40 }}>New to automation?<br />Don't sweat it.</h2>
+        <p style={{ fontSize: 18, color: 'var(--muted)', maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.5 }}>
+          No chatbot experience needed. Connect Instagram and you're capturing leads in minutes.
+        </p>
+        <div className="grid grid-3 mc-onboard-grid">
+          <div className="mc-onboard-card yellow">
+            <Link to="/signup" className="btn mc-pill-dark">Get Started Free</Link>
+            <div className="text-h3 mt24">Sign up for free</div>
+            <div className="subtle">Start your free trial — no credit card required</div>
+          </div>
+          <div className="mc-onboard-card list">
+            {[
+              { icon: Zap, label: 'Auto Reply Rules' },
+              { icon: Clock, label: 'Follow-up Sequences' },
+              { icon: Target, label: 'Lead Scoring' },
+              { icon: MessageCircle, label: 'Instagram Inbox' },
+            ].map((s) => (
+              <div key={s.label} className="mc-onboard-row">
+                <span className="row" style={{ gap: 8 }}><s.icon size={15} /> {s.label}</span>
+                <span className="mc-pill-mini">Set up</span>
+              </div>
+            ))}
+            <div className="text-h3 mt24">Go live in minutes</div>
+            <div className="subtle">Seriously, it's that simple</div>
+          </div>
+          <div className="mc-onboard-card lavender">
+            <div className="mc-onboard-badge"><PartyPopper size={22} /></div>
+            <div className="text-h3 mt24">Cancel anytime</div>
+            <div className="subtle">Spoiler: you won't want to</div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="mk-purple-section" style={{ padding: '80px 20px' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+          <div className="mc-onboard-ic" style={{ background: 'rgba(255,255,255,.15)', color: '#fff' }}><Sparkles size={32} /></div>
+          <h2 style={{ color: '#fff', fontSize: 40 }}>Frequently asked questions</h2>
+        </div>
+        <div style={{ maxWidth: 760, margin: '32px auto 0' }}>
+          {[
+            { q: 'Will connecting LeadOS get my Instagram account restricted?', a: "No. LeadOS uses Meta's official Instagram Graph API through real OAuth — the same access method Meta itself provides to businesses, not scraping or automation that violates their terms." },
+            { q: 'Do I need to know how to code?', a: 'No. Auto-reply rules and follow-up sequences are built through simple forms — name a keyword, write a message, set a delay.' },
+            { q: 'What happens to leads captured from DMs?', a: 'Every DM conversation becomes a lead automatically, with their name and number captured through the conversation, scored, and tracked through a real pipeline.' },
+            { q: 'Can I still reply manually?', a: "Yes — the Inbox shows every DM and comment in real time, and you can jump in and reply yourself any time, automation or not." },
+          ].map((f) => (
+            <details key={f.q} className="mc-faq-item">
+              <summary>{f.q} <ChevronDown size={18} className="mc-faq-chevron" /></summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       <section className="mk-section" style={{ textAlign: 'center' }}>
         <div className="card card-pad">
           <div className="h1">Ready to automate your Instagram?</div>
@@ -165,12 +319,15 @@ export default function Marketing() {
         </div>
       </section>
 
-      <footer style={{ background: '#fff', padding: '80px 20px', textAlign: 'center', borderTop: '1px solid #eee' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24, fontWeight: 600, fontSize: 14 }}>
-          <Link to="/privacy" style={{ color: 'var(--muted)' }}>Privacy Policy</Link>
-          <Link to="/data-deletion" style={{ color: 'var(--muted)' }}>Data Deletion</Link>
+      <footer className="mc-footer-dark">
+        <div className="mc-footer-big">
+          Automate your <span>Instagram</span>
         </div>
-        <div style={{ color: 'var(--muted)', fontSize: 14 }}>© {new Date().getFullYear()} LeadOS</div>
+        <div className="row" style={{ justifyContent: 'center', gap: 24, marginTop: 32, fontWeight: 600, fontSize: 14 }}>
+          <Link to="/privacy" style={{ color: 'rgba(255,255,255,.7)' }}>Privacy Policy</Link>
+          <Link to="/data-deletion" style={{ color: 'rgba(255,255,255,.7)' }}>Data Deletion</Link>
+        </div>
+        <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, marginTop: 16 }}>© {new Date().getFullYear()} LeadOS</div>
       </footer>
     </div>
   );
