@@ -172,7 +172,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     <div
       onClick={onClose}
       className="overlay-in"
-      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}
     >
       <div
         ref={panelRef}
