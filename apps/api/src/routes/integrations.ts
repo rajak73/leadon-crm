@@ -15,6 +15,7 @@ import {
   getSubscribedFields,
   type EligiblePage,
 } from '../services/meta/oauth.js';
+import { getInstagramSenderProfile } from '../services/meta/graph.js';
 import { decryptSecret } from '../lib/crypto.js';
 import { OrgRole } from '@leados/shared';
 
@@ -242,6 +243,61 @@ router.post(
     await prisma.integrationAccount.update({ where: { id: account.id }, data: { webhookSubscribed: true } });
     const subscribedFields = await getSubscribedFields(account.pageId, token);
     res.json({ ok: true, subscribedFields });
+  })
+);
+
+/**
+ * POST /api/v1/integrations/:id/backfill-instagram-names — one-time catch-up
+ * for DM leads/conversations created before username lookup existed. Finds
+ * every Instagram DM conversation with no customerName, fetches the
+ * sender's username, and updates the conversation plus the linked lead's
+ * name if it's still the generic "New Lead" placeholder.
+ */
+router.post(
+  '/:id/backfill-instagram-names',
+  requireOrg(OrgRole.OWNER, OrgRole.ADMIN),
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const account = await prisma.integrationAccount.findFirst({
+      where: { id: req.params.id, organizationId: req.org!.organizationId },
+    });
+    if (!account) throw NotFound('Integration not found');
+    if (account.provider !== 'INSTAGRAM' || !account.pageId || !account.accessToken) {
+      throw BadRequest('Not a connected Instagram account');
+    }
+    const token = decryptSecret(account.accessToken);
+    if (!token) throw BadRequest('No access token stored for this account');
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        organizationId: req.org!.organizationId,
+        channel: 'INSTAGRAM',
+        type: 'DM',
+        customerName: null,
+        externalId: { not: null },
+      },
+      take: 200,
+    });
+
+    let updated = 0;
+    let failed = 0;
+    for (const conv of conversations) {
+      try {
+        const profile = await getInstagramSenderProfile(conv.externalId!, token);
+        const handle = profile.username ? `@${profile.username}` : profile.name;
+        if (!handle) { failed++; continue; }
+        await prisma.conversation.update({ where: { id: conv.id }, data: { customerName: handle } });
+        if (conv.leadId) {
+          const lead = await prisma.lead.findUnique({ where: { id: conv.leadId } });
+          if (lead && lead.name === 'New Lead') {
+            await prisma.lead.update({ where: { id: lead.id }, data: { name: handle } });
+          }
+        }
+        updated++;
+      } catch {
+        failed++;
+      }
+    }
+    res.json({ ok: true, updated, failed, checked: conversations.length });
   })
 );
 

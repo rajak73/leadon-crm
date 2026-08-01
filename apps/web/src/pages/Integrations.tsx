@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Camera, CheckCircle2, XCircle, Plug, AlertTriangle } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Camera, CheckCircle2, XCircle, Plug, AlertTriangle, UserSearch } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card, Badge, EmptyState, Skeleton, SkeletonRows, Modal } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { useToast } from '../lib/toast';
 
 interface Account {
   id: string; provider: string; externalId: string; displayName?: string | null;
@@ -17,6 +18,7 @@ interface EligiblePage { pageId: string; pageName: string; igUsername?: string; 
 
 export default function Integrations() {
   const { currentOrg } = useAuth();
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -26,6 +28,7 @@ export default function Integrations() {
   const [webhookStatus, setWebhookStatus] = useState<{ subscribedFields: string[]; hasComments: boolean; hasMessages: boolean } | null>(null);
   const [checkingWebhook, setCheckingWebhook] = useState(false);
   const [fixingWebhook, setFixingWebhook] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const canManage = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN';
 
   const igAccount = accounts.find((a) => a.provider === 'INSTAGRAM' && a.isConnected);
@@ -91,6 +94,22 @@ export default function Integrations() {
   async function disconnect(id: string) {
     await api.post(`/api/v1/integrations/${id}/disconnect`, {});
     load();
+  }
+
+  async function backfillUsernames() {
+    if (!igAccount) return;
+    setBackfilling(true);
+    try {
+      const r = await api.post<{ updated: number; failed: number; checked: number }>(
+        `/api/v1/integrations/${igAccount.id}/backfill-instagram-names`, {}
+      );
+      if (r.checked === 0) toast.info('No leads were missing an Instagram username.');
+      else toast.success(`Updated ${r.updated} of ${r.checked} lead${r.checked === 1 ? '' : 's'}${r.failed ? ` (${r.failed} couldn't be looked up)` : ''}.`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBackfilling(false);
+    }
   }
 
   const webhookUrl = `${import.meta.env.VITE_API_URL || ''}/api/v1/webhooks/meta`;
@@ -199,6 +218,23 @@ export default function Integrations() {
                   </>
                 )}
               </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {igAccount && (
+        <div className="mt16">
+          <Card title="Instagram usernames">
+            <p className="hint" style={{ marginTop: 0 }}>
+              Comments always include the commenter's username, but Instagram DMs don't — leads created
+              from a DM before this was fixed may still show "New Lead" with no Instagram handle.
+              Run this once to fill them in from your <Link to="/app/leads">Leads</Link> list.
+            </p>
+            {canManage && (
+              <button className="btn sm outline mt8" onClick={backfillUsernames} disabled={backfilling}>
+                <UserSearch size={14} /> {backfilling ? 'Filling in…' : 'Fill in missing Instagram usernames'}
+              </button>
             )}
           </Card>
         </div>
