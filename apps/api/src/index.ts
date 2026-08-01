@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { disconnectPrisma } from './prisma.js';
 import { assertEnv } from './lib/validateEnv.js';
 import { logger } from './lib/logger.js';
+import { migrateLegacyFollowUpRules } from './services/followup.js';
 
 // Validate configuration before accepting traffic (fails fast in production).
 assertEnv();
@@ -15,6 +16,9 @@ const server = app.listen(config.port, () => {
     env: config.nodeEnv,
     aiScoring: config.flags.aiScoringEnabled,
   });
+  // Idempotent catch-up for rules created before multi-step sequences
+  // existed — never blocks accepting traffic.
+  migrateLegacyFollowUpRules().catch((err) => logger.error('followup_legacy_migration_failed', { err: String(err) }));
 });
 
 // Graceful shutdown (BRD §19.4 reliability). On Render/PaaS restarts we stop

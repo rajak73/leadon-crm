@@ -382,6 +382,10 @@ model FollowUpRule {
   id             String   @id @default(cuid())
   organizationId String
   name           String
+  // Deprecated (pre-multi-step-sequences): kept only so old rows aren't
+  // dropped by `prisma db push`. New code reads/writes FollowUpStep instead;
+  // every rule is backfilled with an equivalent single step on API boot
+  // (see services/followup.ts migrateLegacyFollowUpRules).
   delayHours     Int      @default(24)
   template       String
   isActive       Boolean  @default(true)
@@ -389,28 +393,52 @@ model FollowUpRule {
   updatedAt      DateTime @updatedAt
 
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  steps        FollowUpStep[]
   executions   FollowUpExecution[]
 
   @@index([organizationId])
   @@index([organizationId, isActive])
 }
 
+// One step in a follow-up sequence: fires `delayHours` after the previous
+// step fired (or after the triggering inbound message, for step 1) — but
+// only if the lead still hasn't been genuinely replied to.
+model FollowUpStep {
+  id         String   @id @default(cuid())
+  ruleId     String
+  stepOrder  Int
+  delayHours Int
+  template   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  rule       FollowUpRule        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  executions FollowUpExecution[]
+
+  @@unique([ruleId, stepOrder])
+  @@index([ruleId])
+}
+
 model FollowUpExecution {
   id             String   @id @default(cuid())
   organizationId String
   ruleId         String
+  stepId         String?
   conversationId String
   leadId         String?
+  messageId      String?  // the outbound Message this execution created — used to tell a real reply apart from our own follow-up when deciding whether a sequence should keep advancing
   status         String   // SENT | FAILED | SKIPPED
   detail         String?
   createdAt      DateTime @default(now())
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   rule         FollowUpRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  step         FollowUpStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
   conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([ruleId])
+  @@index([stepId])
   @@index([conversationId])
 }
 
