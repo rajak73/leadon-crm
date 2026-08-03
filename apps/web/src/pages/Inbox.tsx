@@ -35,6 +35,8 @@ export default function Inbox() {
   }
   async function openThread(id: string) {
     setActive(id);
+    setSummary('');
+    setSuggestions([]);
     setThread(await api.get<Thread>(`/api/v1/conversations/${id}`));
   }
   useEffect(() => { loadConvs(); loadPlatform(); /* eslint-disable-next-line */ }, []);
@@ -51,6 +53,8 @@ export default function Inbox() {
     setTab(t);
     setActive(null);
     setThread(null);
+    setSummary('');
+    setSuggestions([]);
   }
 
   async function send(e: React.FormEvent) {

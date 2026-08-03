@@ -285,7 +285,7 @@ router.patch(
     const lead = await prisma.lead.update({
       where: { id: existing.id },
       data: {
-        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.name !== undefined ? { name: data.name, nameVerified: true } : {}),
         ...(data.email !== undefined ? { email: data.email || null } : {}),
         ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
         ...(data.source !== undefined ? { source: data.source } : {}),

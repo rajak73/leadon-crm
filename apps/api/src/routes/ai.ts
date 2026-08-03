@@ -21,6 +21,37 @@ import { config } from '../config.js';
 const router = Router();
 router.use(requireAuth, requireOrg());
 
+/**
+ * Shared engagement stats used by both /score-lead/:id and /score-all so a
+ * lead's score doesn't drift depending on which endpoint scored it last.
+ * Response speed: avg time between an inbound message and the next outbound
+ * reply, across the lead's conversations (reuses the dashboard's pairing logic).
+ */
+async function leadEngagementStats(orgId: string, leadId: string) {
+  const messageCount = await prisma.message.count({
+    where: { organizationId: orgId, conversation: { leadId } },
+  });
+
+  const inboundMessages = await prisma.message.findMany({
+    where: { organizationId: orgId, direction: 'INBOUND', conversation: { leadId } },
+    select: { conversationId: true, createdAt: true },
+  });
+  let totalMs = 0;
+  let samples = 0;
+  for (const inbound of inboundMessages) {
+    const nextOutbound = await prisma.message.findFirst({
+      where: { conversationId: inbound.conversationId, direction: 'OUTBOUND', createdAt: { gt: inbound.createdAt } },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (nextOutbound) {
+      totalMs += nextOutbound.createdAt.getTime() - inbound.createdAt.getTime();
+      samples++;
+    }
+  }
+  const avgResponseMinutes = samples > 0 ? totalMs / samples / 60000 : null;
+  return { messageCount, avgResponseMinutes };
+}
+
 /** GET /api/v1/ai/status — is real AI active or rule-based fallback? */
 router.get(
   '/status',
@@ -42,30 +73,7 @@ router.post(
     const lead = await prisma.lead.findFirst({ where: { id: req.params.id, organizationId: orgId } });
     if (!lead) throw NotFound('Lead not found');
 
-    const messageCount = await prisma.message.count({
-      where: { organizationId: orgId, conversation: { leadId: lead.id } },
-    });
-
-    // Response speed: avg time between an inbound message and the next
-    // outbound reply, across this lead's conversations (reuses the same
-    // pairing logic as the dashboard's response-time KPI).
-    const inboundMessages = await prisma.message.findMany({
-      where: { organizationId: orgId, direction: 'INBOUND', conversation: { leadId: lead.id } },
-      select: { conversationId: true, createdAt: true },
-    });
-    let totalMs = 0;
-    let samples = 0;
-    for (const inbound of inboundMessages) {
-      const nextOutbound = await prisma.message.findFirst({
-        where: { conversationId: inbound.conversationId, direction: 'OUTBOUND', createdAt: { gt: inbound.createdAt } },
-        orderBy: { createdAt: 'asc' },
-      });
-      if (nextOutbound) {
-        totalMs += nextOutbound.createdAt.getTime() - inbound.createdAt.getTime();
-        samples++;
-      }
-    }
-    const avgResponseMinutes = samples > 0 ? totalMs / samples / 60000 : null;
+    const { messageCount, avgResponseMinutes } = await leadEngagementStats(orgId, lead.id);
 
     const result = await scoreLead({
       name: lead.name,
@@ -113,9 +121,12 @@ router.post(
 
     // Compute scores (rule-based = fast, deterministic) then persist in one
     // transaction to minimize DB round-trips on the free connection pool.
+    // Includes the same engagement stats as /score-lead/:id so a lead's
+    // score doesn't depend on which endpoint scored it last.
     const updates: any[] = [];
     for (const lead of leads) {
-      const result = await scoreLead(lead);
+      const { messageCount, avgResponseMinutes } = await leadEngagementStats(orgId, lead.id);
+      const result = await scoreLead({ ...lead, messageCount, avgResponseMinutes });
       updates.push(prisma.lead.update({ where: { id: lead.id }, data: { score: result.score } }));
     }
     // Chunk the transaction so we never exceed pool limits.

@@ -91,6 +91,7 @@ model Lead {
   id             String   @id @default(cuid())
   organizationId String
   name           String
+  nameVerified   Boolean  @default(false) // true only once the customer has explicitly stated their name (not an auto-filled Instagram handle/placeholder)
   email          String?
   phone          String?
   source         String   @default("MANUAL") // BRD §10.6

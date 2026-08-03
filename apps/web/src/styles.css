@@ -11,15 +11,15 @@
   --text-secondary: #4B5563;
   --muted: #6B7280;
 
-  /* Accent (purple) */
-  --primary: #8038F9;
-  --primary-hover: #722DE1;
-  --primary-solid: #8038F9;
-  --primary-solid-hover: #722DE1;
+  /* Accent (deep indigo — Stripe/Linear/Notion-style professional blue) */
+  --primary: #6366F1;
+  --primary-hover: #4338CA;
+  --primary-solid: #4F46E5;
+  --primary-solid-hover: #4338CA;
   --primary-content: #FFFFFF;
-  --primary-50: #F3E8FF;
-  --primary-100: #E9D5FF;
-  --primary-600: #7C2FE0;
+  --primary-50: #EEF2FF;
+  --primary-100: #E0E7FF;
+  --primary-600: #4F46E5;
 
   /* Semantic colors — *-text variants are darker, for text/icons on the
      matching *-50 tint or on white (the base tone fails WCAG AA at that
@@ -40,7 +40,7 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-  --shadow-glow: 0 0 20px rgba(128, 56, 249, 0.2);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.2);
 
   --radius-sm: 8px;
   --radius: 14px;
@@ -63,13 +63,13 @@
   --text: #e5e9f0;
   --text-secondary: #b6c0d1;
   --muted: #94a3b8;
-  --primary: #9660fb;
-  --primary-hover: #a97ffc;
-  --primary-solid: #8b4cf9;
-  --primary-solid-hover: #a266fb;
-  --primary-50: #241a3a;
-  --primary-100: #34255a;
-  --primary-600: #b18cfb;
+  --primary: #818CF8;
+  --primary-hover: #A5B4FC;
+  --primary-solid: #4F46E5;
+  --primary-solid-hover: #4338CA;
+  --primary-50: #1E1B4B;
+  --primary-100: #312E81;
+  --primary-600: #A5B4FC;
   --success: #22c55e;
   --success-50: #14321f;
   --success-text: #4ade80;
@@ -130,7 +130,7 @@ h1, h2, h3, h4, h5, h6, .h1, .h2 { letter-spacing: -0.01em; font-weight: 700; co
 .sidebar .brand .logo-dot {
   width: 26px; height: 26px; border-radius: 8px; background: var(--primary-solid);
   display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 13px; flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(128, 56, 249, 0.35);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
 }
 .nav-link {
   display: flex; align-items: center; gap: 10px; padding: 9px 12px 9px 9px; border-radius: 10px;
@@ -256,8 +256,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2 { letter-spacing: -0.01em; font-weight: 700; co
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: var(--card); color: var(--text); transition: background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease; }
 .btn:hover { background: var(--bg-subtle); }
 .btn:active { transform: translateY(1px); }
-.btn.primary { background: var(--primary-solid); color: #fff; box-shadow: 0 1px 2px rgba(128,56,249,.25); }
-.btn.primary:hover { background: var(--primary-solid-hover); box-shadow: 0 4px 12px rgba(128,56,249,.3); }
+.btn.primary { background: var(--primary-solid); color: #fff; box-shadow: 0 1px 2px rgba(79,70,229,.25); }
+.btn.primary:hover { background: var(--primary-solid-hover); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
 .btn.outline { border-color: var(--border); }
 .btn.white-outline { border: 1px solid #fff; color: #fff; background: transparent; border-radius: 99px; padding: 10px 24px; }
 .btn.white-outline:hover { background: rgba(255,255,255,0.1); }

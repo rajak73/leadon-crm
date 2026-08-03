@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   PlusCircle, ArrowRightLeft, StickyNote, IdCard, Sparkles, Briefcase, Cog, MessageSquareReply, UserCheck, Pencil,
-  ListChecks, Clock, MessageCircle, Activity as ActivityIcon,
+  ListChecks, Clock, MessageCircle, Activity as ActivityIcon, BadgeCheck, HelpCircle,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card, Badge, Empty, EmptyState, Avatar, ScoreMeter, Skeleton, SkeletonRows, money } from '../components/ui';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@leados/shared';
 
 interface Lead {
-  id: string; name: string; email?: string | null; phone?: string | null;
+  id: string; name: string; nameVerified?: boolean; email?: string | null; phone?: string | null;
   source: string; status: string; score: number; notes?: string | null;
   tags: string[];
   assignedUser?: { firstName: string; lastName: string } | null;
@@ -143,6 +143,15 @@ export default function LeadDetail() {
         <div style={{ flex: 1, minWidth: 200 }}>
           <div className="row" style={{ gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
             <div className="text-display" style={{ fontSize: 26, marginBottom: 6 }}>{lead.name}</div>
+            {lead.nameVerified ? (
+              <span className="text-small" style={{ color: 'var(--success-text)', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Customer confirmed this name in chat">
+                <BadgeCheck size={14} /> Verified
+              </span>
+            ) : (
+              <span className="text-small subtle" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Auto-filled from Instagram — not yet confirmed by the customer">
+                <HelpCircle size={14} /> Unconfirmed
+              </span>
+            )}
             {instagramHandle(lead) && instagramHandle(lead) !== `@${lead.name}` && (
               <span className="text-small">{instagramHandle(lead)}</span>
             )}

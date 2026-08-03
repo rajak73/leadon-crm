@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, X, Save, Upload, Download, Target } from 'lucide-react';
+import { Sparkles, X, Save, Upload, Download, Target, BadgeCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { useAuth } from '../lib/auth';
@@ -17,6 +17,7 @@ function scoreColor(score: number): string {
 interface Lead {
   id: string;
   name: string;
+  nameVerified?: boolean;
   email?: string | null;
   phone?: string | null;
   instagramUsername?: string | null;
@@ -285,7 +286,10 @@ export default function Leads() {
               {leads.map((l) => (
                 <tr key={l.id} style={selected.has(l.id) ? { background: 'var(--primary-50)' } : undefined}>
                   <td><input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSel(l.id)} /></td>
-                  <td><Link to={`/app/leads/${l.id}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{l.name}</Link></td>
+                  <td>
+                    <Link to={`/app/leads/${l.id}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{l.name}</Link>
+                    {l.nameVerified && <BadgeCheck size={13} style={{ color: 'var(--success-text)', marginLeft: 5, verticalAlign: 'middle' }} aria-label="Name confirmed by customer" />}
+                  </td>
                   <td className="subtle">{l.instagramUsername ? `@${l.instagramUsername.replace(/^@/, '')}` : '—'}</td>
                   <td className="subtle">{l.phone || l.email || '—'}</td>
                   <td><Badge value={l.source} /></td>

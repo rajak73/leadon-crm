@@ -221,6 +221,7 @@ async function processInboundMessage(payload: InboundPayload, isSimulation: bool
       data: {
         organizationId,
         name: senderName || 'New Lead',
+        nameVerified: false,
         source: channel,
         status: 'NEW',
         lastActivityAt: new Date(),
@@ -267,9 +268,13 @@ async function processInboundMessage(payload: InboundPayload, isSimulation: bool
 
   // Run the capture flow (§12).
   const currentState = parseJson<{ captureState?: string }>(lead.customFields)?.captureState ?? null;
+  // Only treat the lead's stored name as "known" once the customer has
+  // actually stated it (nameVerified). An auto-filled Instagram handle or
+  // the "New Lead" placeholder must never count as a real name, otherwise
+  // the capture flow would stop asking for it forever.
   const capture = runCapture({
     messageText: text,
-    currentName: lead.name && lead.name !== 'New Lead' ? lead.name : null,
+    currentName: lead.nameVerified ? lead.name : null,
     currentPhone: lead.phone,
     currentState,
   });
@@ -283,6 +288,7 @@ async function processInboundMessage(payload: InboundPayload, isSimulation: bool
     where: { id: lead.id },
     data: {
       name: capture.nextName ?? lead.name,
+      nameVerified: capture.parsedName ? true : lead.nameVerified,
       phone: capture.nextPhone ?? lead.phone,
       customFields: JSON.stringify(newCustomFields),
       lastActivityAt: new Date(),
