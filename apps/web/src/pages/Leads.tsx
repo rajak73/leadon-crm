@@ -272,7 +272,7 @@ export default function Leads() {
             icon={Target}
             title={t('leads.empty')}
             description="Leads created manually or captured automatically from Instagram DMs will show up here."
-            action={<button className="btn primary sm" onClick={() => setShowNew(true)}>+ {t('leads.new')}</button>}
+            action={<button className="btn primary sm" onClick={() => setShowNew(true)}>{t('leads.emptyAction')}</button>}
           />
         ) : (
           <table className="table">
