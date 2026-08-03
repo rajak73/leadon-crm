@@ -16,6 +16,7 @@ export default function AutoReplyRules() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [editing, setEditing] = useState<Rule | null>(null);
   const canManage = currentOrg?.role === 'OWNER' || currentOrg?.role === 'ADMIN';
 
   async function load() {
@@ -82,6 +83,7 @@ export default function AutoReplyRules() {
                     <td>{r.action === 'ASSIGN_HUMAN' ? 'Assign human' : `Reply: ${r.replyTemplate?.slice(0, 40)}`}</td>
                     <td><Badge value={r.isActive ? 'active' : 'gray'} /></td>
                     <td style={{ textAlign: 'right' }}>
+                      {canManage && <button className="btn sm outline" onClick={() => setEditing(r)}>Edit</button>}{' '}
                       {canManage && <button className="btn sm outline" onClick={() => toggle(r)}>{r.isActive ? 'Disable' : 'Enable'}</button>}{' '}
                       {canManage && <button className="btn sm outline" onClick={() => remove(r)}>Delete</button>}
                     </td>
@@ -94,14 +96,16 @@ export default function AutoReplyRules() {
       </div>
 
       {showNew && <RuleForm onClose={() => setShowNew(false)} onDone={() => { setShowNew(false); load(); }} />}
+      {editing && <RuleForm rule={editing} onClose={() => setEditing(null)} onDone={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function RuleForm({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function RuleForm({ rule, onClose, onDone }: { rule?: Rule; onClose: () => void; onDone: () => void }) {
   const [form, setForm] = useState({
-    name: '', keyword: '', matchType: 'CONTAINS', caseInsensitive: true,
-    action: 'REPLY', replyTemplate: '', priority: 0,
+    name: rule?.name ?? '', keyword: rule?.keyword ?? '', matchType: rule?.matchType ?? 'CONTAINS',
+    caseInsensitive: rule?.caseInsensitive ?? true,
+    action: rule?.action ?? 'REPLY', replyTemplate: rule?.replyTemplate ?? '', priority: rule?.priority ?? 0,
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -109,16 +113,21 @@ function RuleForm({ onClose, onDone }: { onClose: () => void; onDone: () => void
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr('');
     try {
-      await api.post('/api/v1/auto-reply-rules', {
+      const body = {
         ...form,
         replyTemplate: form.action === 'REPLY' ? form.replyTemplate : undefined,
-      });
+      };
+      if (rule) {
+        await api.patch(`/api/v1/auto-reply-rules/${rule.id}`, body);
+      } else {
+        await api.post('/api/v1/auto-reply-rules', body);
+      }
       onDone();
     } catch (e: any) { setErr(e.message); setBusy(false); }
   }
 
   return (
-    <Modal title="New auto-reply rule" onClose={onClose}>
+    <Modal title={rule ? 'Edit auto-reply rule' : 'New auto-reply rule'} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="field"><label>Name</label>
           <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -152,7 +161,7 @@ function RuleForm({ onClose, onDone }: { onClose: () => void; onDone: () => void
         </div>
         {err && <div className="error">{err}</div>}
         <button className="btn primary block mt8" disabled={busy || !form.name.trim() || !form.keyword.trim()}>
-          {busy ? 'Saving…' : 'Create rule'}
+          {busy ? 'Saving…' : rule ? 'Save changes' : 'Create rule'}
         </button>
       </form>
     </Modal>

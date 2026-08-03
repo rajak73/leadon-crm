@@ -314,8 +314,17 @@ h1, h2, h3, h4, h5, h6, .h1, .h2 { letter-spacing: -0.01em; font-weight: 700; co
 .segment-btn.active { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
 
 /* Inbox */
-.inbox { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
-@media (max-width: 800px) { .inbox { grid-template-columns: 1fr; } }
+/* Fixed-height chat layout: the conversation list and the message thread
+   each scroll internally — the page itself must never scroll here, or the
+   conversation list scrolls out of view along with the chat transcript. */
+.inbox { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: calc(100vh - 260px); min-height: 420px; }
+.inbox > .card:first-child { overflow-y: auto; }
+.inbox > .card:last-child { overflow: hidden; }
+@media (max-width: 800px) {
+  .inbox { grid-template-columns: 1fr; height: auto; }
+  .inbox > .card:first-child { overflow-y: visible; max-height: 40vh; }
+  .inbox > .card:last-child { overflow: visible; }
+}
 .conv-item { padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s ease; }
 .conv-item:hover { background: var(--bg-subtle); }
 .conv-item.active { background: var(--primary-50); }
