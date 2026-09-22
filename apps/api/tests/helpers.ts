@@ -1,32 +1,103 @@
-import { execSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import http from 'node:http';
+import request from 'supertest';
+import { afterAll } from 'vitest';
+import { createApp } from '../src/app.js';
+import { prisma } from '../src/lib/prisma.js';
+import { flush } from '../src/lib/queue.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const apiRoot = path.resolve(__dirname, '..');
+export { flush, prisma };
 
-// Isolated Postgres test database — never touches dev data. The schema's
-// datasource provider is "postgresql" (Neon in prod), so the test DB must be
-// too; a sqlite `file:` URL cannot be pushed against a postgresql-provider
-// schema. Override via TEST_DATABASE_URL if the default local socket differs.
-export const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgresql://localhost:5432/leados_test';
+export const PASSWORD = 'correct-horse-battery';
 
-/** Reset the test DB and (re)apply the Prisma schema. Call once in globalSetup. */
-export function prepareTestDb() {
-  execSync('npx prisma db push --skip-generate --accept-data-loss --force-reset', {
-    cwd: apiRoot,
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: 'ignore',
-  });
+/** A listening server for supertest. */
+export type TestApp = http.Server;
+
+/**
+ * The app on one server per test file, listening on 127.0.0.1 for the whole file. (Passing the
+ * Express app to supertest instead opens and closes a server per request; with test files
+ * running in parallel processes a request can then reach another file's server that just
+ * reused the port.)
+ */
+export function testApp(options: Parameters<typeof createApp>[0] = {}): TestApp {
+  const server = http.createServer(
+    createApp({ authRateLimit: 10_000, globalRateLimit: 100_000, ...options }),
+  );
+  server.listen(0, '127.0.0.1');
+  server.unref();
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  return server;
 }
 
-export function cleanupTestDb() {
-  // Schema is dropped/recreated by --force-reset on the next run; nothing to
-  // clean up between runs for a real database.
+export interface Session {
+  token: string;
+  userId: string;
+  cookie: string;
 }
 
-/** Unique email generator for isolated test accounts. */
-export function uniqueEmail(prefix = 'user') {
-  return `${prefix}.${Date.now()}.${Math.floor(Math.random() * 1e6)}@test.local`;
+const cookieFrom = (res: request.Response) => {
+  const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
+  return (
+    (raw ?? []).map((c) => c.split(';')[0] ?? '').find((c) => c.startsWith('leados_rt=')) ?? ''
+  );
+};
+
+export async function setupAdmin(app: TestApp, email = 'admin@example.com'): Promise<Session> {
+  const res = await request(app)
+    .post('/api/auth/setup')
+    .send({
+      companyName: 'Acme Traders',
+      firstName: 'Asha',
+      lastName: 'Rao',
+      email,
+      password: PASSWORD,
+    })
+    .expect(201);
+  return {
+    token: res.body.data.accessToken,
+    userId: res.body.data.user.id,
+    cookie: cookieFrom(res),
+  };
 }
+
+export async function login(app: TestApp, email: string, password = PASSWORD): Promise<Session> {
+  const res = await request(app).post('/api/auth/login').send({ email, password }).expect(200);
+  return {
+    token: res.body.data.accessToken,
+    userId: res.body.data.user.id,
+    cookie: cookieFrom(res),
+  };
+}
+
+export async function createMember(
+  app: TestApp,
+  admin: Session,
+  firstName = 'Mohan',
+  role: 'ADMIN' | 'MEMBER' = 'MEMBER',
+): Promise<Session> {
+  const email = `${firstName.toLowerCase()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  await request(app)
+    .post('/api/users')
+    .set(auth(admin))
+    .send({ firstName, email, password: PASSWORD, role })
+    .expect(201);
+  return login(app, email);
+}
+
+export const auth = (s: Session) => ({ authorization: `Bearer ${s.token}` });
+
+/** Small typed-ish wrapper: api(app, session).post('/leads', body). */
+export function api(app: TestApp, s: Session) {
+  const h = auth(s);
+  return {
+    get: (url: string) => request(app).get(`/api${url}`).set(h),
+    post: (url: string, body?: object) =>
+      request(app)
+        .post(`/api${url}`)
+        .set(h)
+        .send(body ?? {}),
+    patch: (url: string, body: object) => request(app).patch(`/api${url}`).set(h).send(body),
+    delete: (url: string) => request(app).delete(`/api${url}`).set(h),
+  };
+}
+
+export { cookieFrom };

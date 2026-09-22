@@ -1,0 +1,485 @@
+// LeadOS — single-organisation CRM on PostgreSQL (Neon in production).
+//
+// Notes:
+// - Enum-like columns are String and validated by the zod schemas in packages/shared
+//   (constants/enums.ts is the single source of allowed values), so adding a value needs no
+//   migration.
+// - `tags` is a jsonb array of strings (filtered with `array_contains`, GIN-indexed).
+// - Text search uses `contains` with `mode: 'insensitive'` (ILIKE).
+// - Prisma `String` maps to Postgres `text`, so long text needs no `@db.Text`.
+// - Money is `Float` (double precision); values are display amounts, not ledger entries.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Runtime connection. On Neon this is the pooled ("-pooler") connection string.
+  url       = env("DATABASE_URL")
+  // Direct (non-pooled) connection used by `prisma migrate`. Optional for the app: the API and
+  // the scripts default it to DATABASE_URL when it isn't set.
+  directUrl = env("DATABASE_DIRECT_URL")
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+// Single row (id = 1) holding company-wide settings.
+model AppSettings {
+  id              Int      @id // always 1 (upserted by the app)
+  companyName     String   @default("My Company")
+  defaultCurrency String   @default("INR")
+  timezone        String   @default("Asia/Kolkata")
+  aiScoringAuto   Boolean  @default(true) // rescore leads automatically on create/update
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String
+  firstName        String
+  lastName         String    @default("")
+  role             String    @default("MEMBER") // UserRole: ADMIN | MEMBER
+  status           String    @default("ACTIVE") // UserStatus: ACTIVE | DISABLED
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  refreshTokens    RefreshToken[]
+  assignedLeads    Lead[]         @relation("LeadAssignee")
+  createdLeads     Lead[]         @relation("LeadCreator")
+  assignedContacts Contact[]      @relation("ContactAssignee")
+  createdContacts  Contact[]      @relation("ContactCreator")
+  assignedDeals    Deal[]         @relation("DealAssignee")
+  createdDeals     Deal[]         @relation("DealCreator")
+  assignedTasks    Task[]         @relation("TaskAssignee")
+  createdTasks     Task[]         @relation("TaskCreator")
+  notes            Note[]
+  activities       Activity[]
+  notifications    Notification[]
+  createdWorkflows Workflow[]
+}
+
+// Opaque refresh tokens, stored hashed. Rotated on use; reuse of a used token revokes
+// the whole family.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  family    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+}
+
+// ─── CRM ─────────────────────────────────────────────────────────────────────
+
+model Lead {
+  id                   String    @id @default(uuid())
+  firstName            String
+  lastName             String?
+  email                String?
+  phone                String?
+  company              String?
+  source               String    @default("MANUAL") // LeadSource
+  status               String    @default("NEW") // LeadStatus
+  tags                 Json      @default("[]") // string[]
+  lostReason           String?
+  aiScore              Int?
+  aiScoreUpdatedAt     DateTime?
+  assignedToId         String?
+  createdById          String
+  convertedToContactId String?
+  lastActivityAt       DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  assignedTo         User?      @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy          User       @relation("LeadCreator", fields: [createdById], references: [id])
+  convertedToContact Contact?   @relation("LeadToContact", fields: [convertedToContactId], references: [id], onDelete: SetNull)
+  deals              Deal[]
+  tasks              Task[]
+  notes              Note[]
+  activities         Activity[]
+  aiScores           AiScore[]
+  igConversations    IgConversation[]
+  igComments         IgComment[]
+
+  @@index([status])
+  @@index([source])
+  @@index([assignedToId])
+  @@index([aiScore])
+  @@index([createdAt])
+  @@index([lastActivityAt])
+  @@index([email])
+  @@index([deletedAt])
+  @@index([tags(ops: JsonbPathOps)], type: Gin)
+}
+
+model Contact {
+  id             String    @id @default(uuid())
+  firstName      String
+  lastName       String?
+  email          String?
+  phone          String?
+  company        String?
+  jobTitle       String?
+  tags           Json      @default("[]") // string[]
+  assignedToId   String?
+  createdById    String
+  lastActivityAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  assignedTo     User?      @relation("ContactAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy      User       @relation("ContactCreator", fields: [createdById], references: [id])
+  convertedLeads Lead[]     @relation("LeadToContact")
+  deals          Deal[]
+  tasks          Task[]
+  notes          Note[]
+  activities     Activity[]
+
+  @@index([email])
+  @@index([assignedToId])
+  @@index([deletedAt])
+  @@index([tags(ops: JsonbPathOps)], type: Gin)
+}
+
+model Pipeline {
+  id        String   @id @default(uuid())
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stages PipelineStage[]
+  deals  Deal[]
+}
+
+// Ordered by `order` ASC. Each pipeline has exactly one isWon and one isLost stage
+// (enforced in the service layer).
+model PipelineStage {
+  id          String   @id @default(uuid())
+  pipelineId  String
+  name        String
+  order       Int
+  color       String? // #RRGGBB
+  probability Int? // 0–100
+  isWon       Boolean  @default(false)
+  isLost      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+
+  @@index([pipelineId, order])
+}
+
+model Deal {
+  id                String    @id @default(uuid())
+  title             String
+  value             Float?
+  currency          String    @default("INR")
+  status            String    @default("OPEN") // DealStatus
+  pipelineId        String
+  stageId           String
+  leadId            String?
+  contactId         String?
+  assignedToId      String?
+  createdById       String
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  lostReason        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  pipeline   Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Restrict)
+  stage      PipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  lead       Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact    Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  assignedTo User?         @relation("DealAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy  User          @relation("DealCreator", fields: [createdById], references: [id])
+  tasks      Task[]
+  notes      Note[]
+  activities Activity[]
+
+  @@index([pipelineId, stageId, status])
+  @@index([leadId])
+  @@index([contactId])
+  @@index([assignedToId])
+  @@index([deletedAt])
+}
+
+model Task {
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  type             String    @default("OTHER") // TaskType
+  priority         String    @default("MEDIUM") // TaskPriority
+  status           String    @default("PENDING") // TaskStatus
+  dueDate          DateTime?
+  completedAt      DateTime?
+  reminderSentAt   DateTime?
+  assignedToId     String?
+  createdById      String
+  relatedLeadId    String?
+  relatedContactId String?
+  relatedDealId    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  assignedTo     User?    @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy      User     @relation("TaskCreator", fields: [createdById], references: [id])
+  relatedLead    Lead?    @relation(fields: [relatedLeadId], references: [id], onDelete: SetNull)
+  relatedContact Contact? @relation(fields: [relatedContactId], references: [id], onDelete: SetNull)
+  relatedDeal    Deal?    @relation(fields: [relatedDealId], references: [id], onDelete: SetNull)
+
+  @@index([assignedToId, status])
+  @@index([dueDate, status])
+  @@index([relatedLeadId])
+  @@index([relatedDealId])
+  @@index([deletedAt])
+}
+
+// Plain-text notes.
+model Note {
+  id               String    @id @default(uuid())
+  content          String
+  createdById      String
+  relatedLeadId    String?
+  relatedContactId String?
+  relatedDealId    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  relatedLead    Lead?    @relation(fields: [relatedLeadId], references: [id], onDelete: Cascade)
+  relatedContact Contact? @relation(fields: [relatedContactId], references: [id], onDelete: Cascade)
+  relatedDeal    Deal?    @relation(fields: [relatedDealId], references: [id], onDelete: Cascade)
+
+  @@index([relatedLeadId])
+  @@index([relatedContactId])
+  @@index([relatedDealId])
+}
+
+// Append-only timeline.
+model Activity {
+  id               String   @id @default(uuid())
+  type             String // ActivityType
+  description      String
+  metadata         Json     @default("{}")
+  performedById    String? // null = system / workflow
+  relatedLeadId    String?
+  relatedContactId String?
+  relatedDealId    String?
+  createdAt        DateTime @default(now())
+
+  performedBy    User?    @relation(fields: [performedById], references: [id], onDelete: SetNull)
+  relatedLead    Lead?    @relation(fields: [relatedLeadId], references: [id], onDelete: Cascade)
+  relatedContact Contact? @relation(fields: [relatedContactId], references: [id], onDelete: Cascade)
+  relatedDeal    Deal?    @relation(fields: [relatedDealId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([relatedLeadId, createdAt])
+  @@index([relatedContactId, createdAt])
+  @@index([relatedDealId, createdAt])
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String // NotificationType
+  title      String
+  body       String
+  entityType String? // 'lead' | 'deal' | 'task' | 'contact'
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+// ─── AI ──────────────────────────────────────────────────────────────────────
+
+// Full scoring history; Lead.aiScore is the denormalised latest value.
+model AiScore {
+  id             String   @id @default(uuid())
+  leadId         String
+  score          Int
+  factors        Json     @default("[]") // ScoringFactor[]
+  recommendation String
+  modelVersion   String
+  triggeredBy    String // 'manual' | 'auto' | 'workflow'
+  createdAt      DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+
+// ─── Automation ──────────────────────────────────────────────────────────────
+
+model Workflow {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  triggerType String // WorkflowTriggerType
+  definition  Json // WorkflowDefinition (validated by zod)
+  isActive    Boolean   @default(false)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  createdBy User          @relation(fields: [createdById], references: [id])
+  runs      WorkflowRun[]
+
+  @@index([triggerType, isActive])
+}
+
+model WorkflowRun {
+  id           String    @id @default(uuid())
+  workflowId   String
+  status       String    @default("PENDING") // WorkflowRunStatus
+  triggerEvent Json // { type, entityId, payload }
+  actionLogs   Json      @default("[]") // ActionLog[]
+  error        String?
+  depth        Int       @default(0)
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, startedAt])
+}
+
+// ─── Instagram ───────────────────────────────────────────────────────────────
+
+// The one connected Instagram professional account (single row, id = 1).
+model IgAccount {
+  id                Int       @id // always 1
+  igUserId          String    @unique // Instagram-scoped id of the business account
+  username          String
+  name              String?
+  profilePictureUrl String?
+  accessTokenEnc    String // AES-256-GCM encrypted long-lived token
+  tokenExpiresAt    DateTime?
+  status            String    @default("ACTIVE") // IgAccountStatus: ACTIVE | EXPIRED | ERROR
+  statusMessage     String?
+  lastWebhookAt     DateTime?
+  connectedAt       DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// A DM thread with one Instagram user.
+model IgConversation {
+  id                String    @id @default(uuid())
+  igsid             String    @unique // the customer's Instagram-scoped user id
+  username          String?
+  name              String?
+  profilePictureUrl String?
+  leadId            String?
+  aiEnabled         Boolean   @default(true) // false = AI paused for this thread
+  aiPausedReason    String? // e.g. "Asked to talk to a person"
+  needsAttention    Boolean   @default(false) // handoff happened or a draft is waiting
+  unreadCount       Int       @default(0)
+  lastMessageAt     DateTime?
+  lastMessagePreview String?
+  lastInboundAt     DateTime? // start of the 24-hour reply window
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  lead     Lead?       @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  messages IgMessage[]
+
+  @@index([lastMessageAt])
+  @@index([needsAttention])
+}
+
+model IgMessage {
+  id             String    @id @default(uuid())
+  conversationId String
+  direction      String // MessageDirection: INBOUND | OUTBOUND
+  mid            String?   @unique // Instagram message id (null until sent / for drafts)
+  text           String?
+  attachments    Json      @default("[]") // Array<{ type, url }>
+  author         String // MessageAuthor: CUSTOMER | USER | AI | INSTAGRAM_APP (sent from the phone app)
+  sentById       String? // user who sent or approved it
+  status         String // MessageStatus: RECEIVED | DRAFT | SENDING | SENT | FAILED | DISCARDED
+  error          String?
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime?
+
+  conversation IgConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([status])
+}
+
+// A comment on one of the account's posts or reels.
+model IgComment {
+  id              String    @id @default(uuid())
+  commentId       String    @unique // Instagram comment id
+  parentCommentId String? // set when this is a reply in a comment thread
+  mediaId         String
+  mediaPermalink  String?
+  mediaCaption    String?
+  mediaThumbnail  String?
+  fromIgId        String
+  fromUsername    String?
+  text            String
+  leadId          String?
+  replyStatus     String    @default("NONE") // CommentReplyStatus: NONE | DRAFT | REPLIED | SKIPPED | FAILED
+  publicReply     String? // text of the public reply (draft or sent)
+  privateReply    String? // text of the DM sent to the commenter (draft or sent)
+  replyCommentId  String? // Instagram id of our public reply
+  privateReplySent Boolean  @default(false)
+  replyError      String?
+  skipReason      String? // why AI skipped (spam, needs a person, …)
+  repliedById     String? // user who replied manually or approved the draft
+  commentedAt     DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([commentedAt])
+  @@index([replyStatus])
+  @@index([mediaId])
+}
+
+// Auto-reply configuration (single row, id = 1).
+model AutoReplySettings {
+  id                  Int      @id // always 1
+  dmEnabled           Boolean  @default(false)
+  commentsEnabled     Boolean  @default(false)
+  mode                String   @default("DRAFT") // AutoReplyMode: AUTO | DRAFT
+  commentReplyMode    String   @default("PUBLIC") // CommentReplyMode: PUBLIC | PRIVATE | BOTH
+  businessInfo        String   @default("") // what the AI may say: services, prices, hours, FAQs
+  tone                String   @default("Friendly and professional. Short replies.")
+  handoffMessage      String   @default("Thanks! Someone from our team will reply to you shortly.")
+  replyDelaySeconds   Int      @default(20) // wait so several quick messages get one reply
+  maxRepliesPerDay    Int      @default(20) // per conversation
+  createLeads         Boolean  @default(true)
+  collectContactDetails Boolean @default(true) // AI asks for name + phone when the lead has no phone
+  updatedAt           DateTime @updatedAt
+}

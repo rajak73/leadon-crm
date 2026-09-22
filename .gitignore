@@ -2,35 +2,35 @@
 node_modules/
 .pnpm-store/
 
-# env — NEVER commit secrets (BRD §19.1)
+# build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# turbo
+.turbo/
+
+# test / coverage
+coverage/
+
+# env & secrets (never commit)
 .env
 .env.*
 !.env.example
 
-# build output
-dist/
-build/
-.next/
-out/
-
-# prisma / db
-*.db
-*.db-journal
-test.db
-prisma/*.sqlite
-prisma/migrations/dev.db
-
 # logs
 *.log
-logs/
+npm-debug.log*
+pnpm-debug.log*
 
 # os / editor
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 
-# playwright / e2e
-apps/web/test-results/
-apps/web/playwright-report/
-apps/api/e2e.db
-apps/api/e2e.db-journal
+# prisma local
+prisma/*.db
+prisma/data/
+apps/api/tests/.tmp/

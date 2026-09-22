@@ -1,62 +1,35 @@
 name: CI
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
-    branches: [main, master]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  check:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: leados_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    env:
+      NODE_ENV: test
+      BCRYPT_COST: 4
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      # pnpm version comes from `packageManager` in package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: pnpm --filter @leados/api prisma:generate
-
-      - name: Type-check API
-        run: pnpm --filter @leados/api exec tsc --noEmit -p tsconfig.json
-
-      - name: Run API tests
-        run: pnpm --filter @leados/api test
-        env:
-          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leados_test
-
-      - name: Build web
-        run: pnpm --filter @leados/web build
-
-      - name: Install Playwright browser + deps
-        run: pnpm --filter @leados/web exec playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: pnpm --filter @leados/web e2e
-        env:
-          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leados_test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm audit --audit-level=high --prod

@@ -1,23 +1,44 @@
 {
   "name": "leados",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "LeadOS — AI-Powered CRM & Social Lead Automation Platform (monorepo)",
-  "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
-    "build": "pnpm -r build",
-    "db:generate": "pnpm --filter @leados/api prisma:generate",
-    "db:migrate": "pnpm --filter @leados/api prisma:migrate",
-    "db:push": "pnpm --filter @leados/api prisma:push",
-    "db:seed": "pnpm --filter @leados/api demo:seed",
-    "api": "pnpm --filter @leados/api dev",
-    "web": "pnpm --filter @leados/web dev"
-  },
+  "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22"
   },
-  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "pnpm --filter @leados/api start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test --concurrency=1",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\"",
+    "db:migrate": "pnpm --filter @leados/api db:migrate",
+    "db:migrate:create": "pnpm --filter @leados/api db:migrate:create",
+    "db:seed": "pnpm --filter @leados/api db:seed",
+    "db:import-legacy": "pnpm --filter @leados/api db:import-legacy",
+    "db:studio": "pnpm --filter @leados/api db:studio",
+    "prepare": "husky || true"
+  },
   "devDependencies": {
-    "typescript": "^5.4.5"
-  }
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "turbo": "^2.2.3",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.11.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,json,md}": "prettier --write"
+  },
+  "pnpm": {}
 }

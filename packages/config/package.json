@@ -1,0 +1,13 @@
+{
+  "name": "@leados/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./prettier": "./prettier.preset.mjs"
+  },
+  "files": [
+    "prettier.preset.mjs",
+    "README.md"
+  ]
+}

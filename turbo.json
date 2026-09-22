@@ -1,0 +1,77 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "NODE_ENV",
+        "PORT",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "APP_ORIGIN",
+        "TRUST_PROXY",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        "LOG_LEVEL",
+        "BCRYPT_COST",
+        "WEB_DIST_DIR",
+        "SEED_ADMIN_EMAIL",
+        "SEED_ADMIN_PASSWORD",
+        "CI"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "passThroughEnv": [
+        "NODE_ENV",
+        "PORT",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "APP_ORIGIN",
+        "TRUST_PROXY",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        "LOG_LEVEL",
+        "BCRYPT_COST",
+        "WEB_DIST_DIR",
+        "SEED_ADMIN_EMAIL",
+        "SEED_ADMIN_PASSWORD",
+        "CI"
+      ]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "passThroughEnv": [
+        "NODE_ENV",
+        "PORT",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "APP_ORIGIN",
+        "TRUST_PROXY",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        "LOG_LEVEL",
+        "BCRYPT_COST",
+        "WEB_DIST_DIR",
+        "SEED_ADMIN_EMAIL",
+        "SEED_ADMIN_PASSWORD",
+        "CI"
+      ]
+    }
+  }
+}

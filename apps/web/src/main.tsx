@@ -1,25 +1,18 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import { AuthProvider } from './lib/auth';
-import { ThemeProvider } from './lib/theme';
-import { I18nProvider } from './lib/i18n';
-import { ToastProvider } from './lib/toast';
-import './styles.css';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { RouterProvider } from 'react-router';
+import '@fontsource-variable/geist';
+import './styles/index.css';
+import { AppProviders } from './app/providers';
+import { router } from './app/router';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ThemeProvider>
-        <I18nProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </ToastProvider>
-        </I18nProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+const root = document.getElementById('root');
+if (!root) throw new Error('Root element missing');
+
+createRoot(root).render(
+  <StrictMode>
+    <AppProviders>
+      <RouterProvider router={router} />
+    </AppProviders>
+  </StrictMode>,
 );

@@ -1,16 +1,64 @@
-/**
- * Runs before any test module imports config/prisma. Points the app at an
- * isolated Postgres test DB (matches the schema's postgresql provider — see
- * helpers.ts) and sets deterministic secrets.
- */
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'postgresql://localhost:5432/leados_test';
-process.env.TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY ?? 'test-token-encryption-key';
+import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterAll, inject } from 'vitest';
+import { SCHEMA_PREFIX, urlForSchema } from './db.js';
+
+// Runs in every test file before any app module is imported: create a private Postgres schema
+// for this file, apply the real migrations to it and point the app at it.
+const schema = [
+  SCHEMA_PREFIX + inject('testRunId'),
+  process.env.VITEST_POOL_ID ?? '0',
+  crypto.randomBytes(4).toString('hex'),
+].join('_');
+const url = urlForSchema(schema);
+
+const cli = createRequire(import.meta.url).resolve('prisma/build/index.js');
+const schemaFile = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../prisma/schema.prisma',
+);
+execFileSync(process.execPath, [cli, 'migrate', 'deploy', `--schema=${schemaFile}`], {
+  env: {
+    ...process.env,
+    DATABASE_URL: url,
+    DATABASE_DIRECT_URL: url,
+    // Each file has its own schema, so parallel migrations can't conflict; skip Prisma's
+    // database-wide migration lock so files don't queue behind each other.
+    PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: '1',
+  },
+  stdio: 'pipe',
+});
+
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-secret-1234567890';
-process.env.CRON_SECRET = 'test-cron-secret';
-process.env.WEB_ORIGIN = '*';
-process.env.FLAG_AI_SCORING_ENABLED = 'false';
-process.env.ENFORCE_PLAN_LIMITS = 'true';
-// Meta creds for signature tests.
-process.env.META_APP_SECRET = 'test_app_secret';
-process.env.META_WEBHOOK_VERIFY_TOKEN = 'test_verify_token';
+process.env.DATABASE_URL = url;
+process.env.DATABASE_DIRECT_URL = url;
+process.env.BCRYPT_COST = '4';
+process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-signing';
+process.env.LOG_LEVEL = 'silent';
+// Never let a developer's real AI or Meta settings leak into tests.
+for (const key of [
+  'AI_PROVIDER',
+  'AI_MODEL',
+  'GEMINI_API_KEY',
+  'GROQ_API_KEY',
+  'OPENAI_API_KEY',
+  'OPENAI_MODEL',
+  'META_APP_SECRET',
+  'META_WEBHOOK_VERIFY_TOKEN',
+  'PUBLIC_URL',
+  'ENCRYPTION_KEY',
+  'INSTAGRAM_TEST_MODE',
+])
+  delete process.env[key];
+
+afterAll(async () => {
+  const { prisma } = await import('../src/lib/prisma.js');
+  try {
+    await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+  } finally {
+    await prisma.$disconnect();
+  }
+});

@@ -1,0 +1,264 @@
+@import 'tailwindcss';
+
+/* ─── Raw token values ────────────────────────────────────────────────────────
+   Components never reference these directly; they use the semantic Tailwind
+   colours registered in @theme below (bg-surface, text-fg-muted, …).
+   LeadOS uses a single light theme. Contrast: every text colour is ≥ 4.5:1 on
+   background, surface and muted. */
+:root {
+  /* Warm neutrals + near-black actions + red brand accent (inspired by usefastlane.ai). */
+  --background: #f7f5f3;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --muted: #f1efec;
+  --border: #e9e6e3;
+  --border-strong: #d8d4d0;
+  --fg: #121111;
+  --fg-muted: #52505a;
+  --fg-subtle: #6b6970;
+  --overlay: rgb(18 17 17 / 0.45);
+
+  /* "primary" = the main action colour: near-black buttons, switches and selections. */
+  --primary: #16151a;
+  --primary-hover: #2c2a30;
+  --primary-fg: #ffffff;
+  --primary-subtle: #efece9;
+  --primary-subtle-fg: #121111;
+  --primary-text: #c4271c; /* links and eyebrow text use the brand red */
+
+  /* "accent" = brand red for highlights: logo, badges, key calls to action. */
+  --accent: #dc2b20;
+  --accent-hover: #c2241a;
+  --accent-fg: #ffffff;
+  --accent-subtle: #ffeeec;
+  --accent-subtle-fg: #b3261e;
+  --accent-glow: #ff2e2e;
+
+  --success: #15803d;
+  --success-subtle: #e9f7ee;
+  --success-fg: #166534;
+  --warning: #b45309;
+  --warning-subtle: #fff4e0;
+  --warning-fg: #92400e;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-subtle: #fdecec;
+  --danger-fg: #991b1b;
+  --info: #0369a1;
+  --info-subtle: #e8f4fb;
+  --info-fg: #075985;
+
+  --focus: #ff5a3c;
+
+  --chart-1: #2b2a30;
+  --chart-2: #dc2b20;
+  --chart-3: #0284c7;
+  --chart-4: #d97706;
+  --chart-5: #059669;
+  --chart-6: #7c3aed;
+  --chart-7: #db2777;
+  --chart-8: #78716c;
+
+  --shadow-color: 20 10% 20%;
+  color-scheme: light;
+}
+
+/* ─── Theme ───────────────────────────────────────────────────────────────────
+   The default Tailwind palette is removed on purpose: only semantic tokens
+   exist, so `text-red-600` simply does not compile to anything. */
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-overlay: var(--overlay);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-fg: var(--primary-subtle-fg);
+  --color-primary-text: var(--primary-text);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-subtle-fg: var(--accent-subtle-fg);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-fg: var(--success-fg);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-fg: var(--warning-fg);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-fg: var(--danger-fg);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-fg: var(--info-fg);
+
+  --color-focus: var(--focus);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-md:
+    0 1px 2px hsl(var(--shadow-color) / 0.06), 0 4px 12px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg:
+    0 4px 8px hsl(var(--shadow-color) / 0.08), 0 16px 40px hsl(var(--shadow-color) / 0.16);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-slide-in-left: slide-in-left 200ms ease-out;
+  --animate-slide-in-right: slide-in-right 200ms ease-out;
+  --animate-scale-in: scale-in 150ms ease-out;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ─── Type scale ──────────────────────────────────────────────────────────── */
+@utility type-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+@utility type-section {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility type-body {
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+@utility type-small {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+@utility type-caption {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+@utility type-metric {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  /* A visible focus ring on everything interactive, keyboard only. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background-color: var(--color-primary-subtle);
+    color: var(--color-primary-subtle-fg);
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Smooth in-page jumps (home page section links), unless the user prefers less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

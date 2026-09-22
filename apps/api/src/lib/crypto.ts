@@ -1,41 +1,40 @@
-/**
- * AES-256-GCM encryption for secrets stored at rest (e.g.
- * IntegrationAccount.accessToken). The configured TOKEN_ENCRYPTION_KEY is
- * normalized via SHA-256 to a 32-byte key, so any non-empty string works.
- */
 import crypto from 'node:crypto';
-import { config } from '../config.js';
-
-const ALGO = 'aes-256-gcm';
-
-function deriveKey(): Buffer {
-  return crypto.createHash('sha256').update(config.tokenEncryptionKey).digest();
-}
-
-/** Encrypt plaintext, returning `iv:authTag:ciphertext` (all base64url). */
-export function encryptSecret(plaintext: string): string {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(ALGO, deriveKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-  return [iv, authTag, ciphertext].map((b) => b.toString('base64url')).join(':');
-}
+import { env } from '../config/env.js';
 
 /**
- * Decrypt a value produced by encryptSecret. Values not in our `iv:tag:ct`
- * format are assumed to be legacy plaintext (pre-encryption dev data or the
- * manual-paste fallback) and returned as-is.
+ * AES-256-GCM for secrets stored in the database (the Instagram access token).
+ * The key comes from ENCRYPTION_KEY, or is derived from JWT_SECRET with HKDF, so changing
+ * either makes stored secrets unreadable (the admin then reconnects).
+ * Format: `v1.<iv>.<tag>.<ciphertext>` (base64url parts).
  */
-export function decryptSecret(stored: string | null | undefined): string | null {
-  if (!stored) return null;
-  const parts = stored.split(':');
-  if (parts.length !== 3) return stored;
-  try {
-    const [iv, authTag, ciphertext] = parts.map((p) => Buffer.from(p, 'base64url'));
-    const decipher = crypto.createDecipheriv(ALGO, deriveKey(), iv);
-    decipher.setAuthTag(authTag);
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
-  } catch {
-    return null;
-  }
+const VERSION = 'v1';
+
+function key(): Buffer {
+  const secret = env.ENCRYPTION_KEY ?? env.JWT_SECRET;
+  return Buffer.from(
+    crypto.hkdfSync('sha256', secret, 'leados-secrets', 'aes-256-gcm token encryption', 32),
+  );
+}
+
+export function encryptSecret(plain: string): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key(), iv);
+  const ciphertext = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [VERSION, iv, tag, ciphertext]
+    .map((p) => (typeof p === 'string' ? p : p.toString('base64url')))
+    .join('.');
+}
+
+/** Throws if the value was tampered with or encrypted with a different key. */
+export function decryptSecret(value: string): string {
+  const [version, iv, tag, ciphertext] = value.split('.');
+  if (version !== VERSION || !iv || !tag || ciphertext === undefined)
+    throw new Error('Unrecognised encrypted value');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key(), Buffer.from(iv, 'base64url'));
+  decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertext, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8');
 }

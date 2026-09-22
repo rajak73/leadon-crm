@@ -1,137 +1,188 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import compression from 'compression';
-import { config } from './config.js';
-import { errorHandler } from './middleware/error.js';
-import { globalRateLimit, authRateLimit, aiRateLimit } from './middleware/rateLimit.js';
-import { requestLogger, metrics } from './middleware/requestLog.js';
+import cookieParser from 'cookie-parser';
+import express, { Router, type Express } from 'express';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { pinoHttp } from 'pino-http';
+import { ErrorCode } from '@leados/shared';
+import { env, isProduction } from './config/env.js';
+import { authenticate } from './lib/auth.js';
+import { errorHandler, notFoundHandler } from './lib/error-handler.js';
+import { logger } from './lib/logger.js';
+import { prisma } from './lib/prisma.js';
+import { registerAiSubscribers } from './modules/ai/index.js';
+import { activitiesRouter } from './modules/activities/index.js';
+import { analyticsRouter } from './modules/analytics/index.js';
+import { authRouter, meRouter } from './modules/auth/index.js';
+import { contactsRouter } from './modules/contacts/index.js';
+import { dealsRouter } from './modules/deals/index.js';
+import {
+  autoReplyRouter,
+  instagramRouter,
+  instagramWebhookRouter,
+} from './modules/instagram/index.js';
+import { leadsRouter } from './modules/leads/index.js';
+import { notesRouter } from './modules/notes/index.js';
+import {
+  notificationsRouter,
+  registerNotificationSubscribers,
+} from './modules/notifications/index.js';
+import { pipelinesRouter } from './modules/pipelines/index.js';
+import { searchRouter } from './modules/search/index.js';
+import { settingsRouter } from './modules/settings/index.js';
+import { tasksRouter } from './modules/tasks/index.js';
+import { usersRouter } from './modules/users/index.js';
+import { registerWorkflowEngine, workflowsRouter } from './modules/workflows/index.js';
 
-import authRoutes from './routes/auth.js';
-import twoFactorRoutes from './routes/twofactor.js';
-import ssoRoutes from './routes/sso.js';
-import organizationRoutes from './routes/organizations.js';
-import adminRoutes from './routes/admin.js';
-import dashboardRoutes from './routes/dashboard.js';
-import leadRoutes from './routes/leads.js';
-import contactRoutes from './routes/contacts.js';
-import dealRoutes from './routes/deals.js';
-import taskRoutes from './routes/tasks.js';
-import conversationRoutes from './routes/conversations.js';
-import simulationRoutes from './routes/simulation.js';
-import cronRoutes from './routes/cron.js';
-import aiRoutes from './routes/ai.js';
-import billingRoutes from './routes/billing.js';
-import integrationRoutes from './routes/integrations.js';
-import instagramOAuthRoutes from './routes/instagram-oauth.js';
-import followUpRoutes from './routes/followups.js';
-import autoReplyRuleRoutes from './routes/auto-reply-rules.js';
-import metaWebhookRoutes from './routes/meta-webhook.js';
-import formRoutes from './routes/forms.js';
-import workflowRoutes from './routes/workflows.js';
-import calendarRoutes from './routes/calendar.js';
-import notificationRoutes from './routes/notifications.js';
-import auditRoutes from './routes/audit.js';
-import savedViewRoutes from './routes/savedViews.js';
-import searchRoutes from './routes/search.js';
-import reportsRoutes from './routes/reports.js';
-import docsRoutes from './routes/docs.js';
+export interface AppOptions {
+  /** Max login/setup attempts per IP per minute. */
+  authRateLimit?: number;
+  /** Max API requests per IP per minute. */
+  globalRateLimit?: number;
+}
 
-export function createApp() {
+const rateLimited = (message: string) => ({
+  success: false,
+  error: { code: ErrorCode.RATE_LIMITED, message },
+});
+
+/** Background subscribers (workflows, AI auto-scoring, notifications). Registration is idempotent. */
+export function registerSubscribers(): void {
+  registerNotificationSubscribers();
+  registerAiSubscribers();
+  registerWorkflowEngine();
+}
+
+export function createApp(options: AppOptions = {}): Express {
+  registerSubscribers();
   const app = express();
+  app.disable('x-powered-by');
+  // true = one proxy hop (Render's load balancer); a number = that many hops.
+  app.set('trust proxy', env.TRUST_PROXY === true ? 1 : env.TRUST_PROXY);
 
-  // Trust the proxy (Render/most PaaS) so req.ip reflects the real client for
-  // rate limiting. Single hop is safe.
-  app.set('trust proxy', 1);
-
-  app.use(helmet());
-  app.use(compression()); // gzip responses — saves free-tier bandwidth (BRD §19.2)
   app.use(
-    cors({
-      origin: config.webOrigin === '*' ? true : config.webOrigin.split(','),
-      credentials: true,
-    })
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // Radix/Recharts set inline styles
+          fontSrc: ["'self'", 'data:'],
+          imgSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          ...(isProduction ? { upgradeInsecureRequests: [] } : {}),
+        },
+      },
+      strictTransportSecurity: isProduction,
+    }),
+  );
+  app.use(compression());
+  app.use(
+    pinoHttp({
+      logger,
+      autoLogging: { ignore: (req) => req.url === '/api/health' },
+      customLogLevel: (_req, res, err) =>
+        err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+    }),
   );
 
-  // Structured request logging + metrics (BRD §19.3). Mounted before
-  // everything else (including the webhook route below) so every request —
-  // Meta's webhook deliveries included — is actually visible in logs. It
-  // never touches the body, so it's safe ahead of the webhook's raw parser.
-  app.use(requestLogger);
+  // Meta webhooks: public, raw body (signature is computed over the exact bytes), and not
+  // behind the per-IP rate limit (Meta delivers bursts from a few addresses).
+  app.use('/api/webhooks/instagram', instagramWebhookRouter);
 
-  // Meta webhook is mounted BEFORE express.json() because signature
-  // verification needs the raw request bytes (the route uses its own raw
-  // body parser). BRD §16.
-  app.use('/api/v1/webhooks', metaWebhookRoutes);
-
-  app.use(express.json({ limit: '1mb' }));
-
-  // Health / readiness — cheap, never rate-limited (free hosts ping these).
-  app.get('/health', (_req, res) =>
-    res.json({
-      status: 'ok',
-      service: 'leados-api',
-      env: config.nodeEnv,
-      flags: config.flags,
-      time: new Date().toISOString(),
-    })
+  const api = Router();
+  api.use(
+    rateLimit({
+      windowMs: 60_000,
+      limit: options.globalRateLimit ?? 600,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      message: rateLimited('You are sending requests too quickly. Please wait a moment.'),
+    }),
   );
+  api.use(express.json({ limit: '1mb' }));
+  api.use(cookieParser());
 
-  // Lightweight metrics (BRD §19.3) — uptime, request counts, avg latency.
-  app.get('/metrics', (_req, res) => {
-    const avgLatencyMs = metrics.totalRequests ? metrics.sumLatencyMs / metrics.totalRequests : 0;
-    res.json({
-      uptimeSec: Math.floor((Date.now() - metrics.startedAt) / 1000),
-      totalRequests: metrics.totalRequests,
-      byStatusClass: metrics.byStatusClass,
-      errors: metrics.errors,
-      avgLatencyMs: Math.round(avgLatencyMs * 10) / 10,
-    });
+  api.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ok', db: 'ok' });
+    } catch {
+      res.status(503).json({ status: 'error', db: 'error' });
+    }
   });
 
-  // API docs (public Swagger UI + raw spec) — before rate limiting.
-  app.use('/api/docs', docsRoutes);
+  const credentialLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: options.authRateLimit ?? 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: rateLimited('Too many attempts. Please wait a minute and try again.'),
+  });
+  api.use('/auth', authRouter(credentialLimiter));
+  api.use('/me', meRouter);
 
-  // Global rate limit for all API routes (BRD §19.3). Applied after /health.
-  app.use('/api', globalRateLimit);
+  // Everything below requires a signed-in user.
+  const secured = Router();
+  secured.use(authenticate);
+  secured.use('/users', usersRouter);
+  secured.use('/settings', settingsRouter);
+  secured.use('/leads', leadsRouter);
+  secured.use('/contacts', contactsRouter);
+  secured.use('/pipelines', pipelinesRouter);
+  secured.use('/deals', dealsRouter);
+  secured.use('/tasks', tasksRouter);
+  secured.use('/notes', notesRouter);
+  secured.use('/activities', activitiesRouter);
+  secured.use('/notifications', notificationsRouter);
+  secured.use('/workflows', workflowsRouter);
+  secured.use('/search', searchRouter);
+  secured.use('/analytics', analyticsRouter);
+  secured.use('/instagram', instagramRouter);
+  secured.use('/auto-reply', autoReplyRouter);
+  api.use(secured);
+  api.use(notFoundHandler);
 
-  // API v1 — auth gets a stricter limiter to blunt brute-force/abuse.
-  app.use('/api/v1/auth', authRateLimit, authRoutes);
-  app.use('/api/v1/2fa', twoFactorRoutes);
-  app.use('/api/v1/sso', ssoRoutes);
-  app.use('/api/v1/organizations', organizationRoutes);
-  app.use('/api/v1/admin', adminRoutes);
-  app.use('/api/v1/dashboard', dashboardRoutes);
-  app.use('/api/v1/leads', leadRoutes);
-  app.use('/api/v1/contacts', contactRoutes);
-  app.use('/api/v1/deals', dealRoutes);
-  app.use('/api/v1/tasks', taskRoutes);
-  app.use('/api/v1/conversations', conversationRoutes);
-  app.use('/api/v1/simulation', simulationRoutes);
-  app.use('/api/v1/ai', aiRateLimit, aiRoutes);
-  app.use('/api/v1/billing', billingRoutes);
-  // Public leg of the Instagram OAuth flow (Meta redirects here directly, no
-  // Authorization header) — mounted before the authenticated integrations
-  // router so its one route is matched first.
-  app.use('/api/v1/integrations', instagramOAuthRoutes);
-  app.use('/api/v1/integrations', integrationRoutes);
-  app.use('/api/v1/follow-ups', followUpRoutes);
-  app.use('/api/v1/auto-reply-rules', autoReplyRuleRoutes);
-  app.use('/api/v1/forms', formRoutes);
-  app.use('/api/v1/workflows', workflowRoutes);
-  app.use('/api/v1/calendar', calendarRoutes);
-  app.use('/api/v1/notifications', notificationRoutes);
-  app.use('/api/v1/audit', auditRoutes);
-  app.use('/api/v1/saved-views', savedViewRoutes);
-  app.use('/api/v1/search', searchRoutes);
-  app.use('/api/v1/reports', reportsRoutes);
-  app.use('/api/internal/cron', cronRoutes);
+  app.use('/api', api);
 
-  // 404
-  app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+  if (isProduction) serveWebApp(app);
 
-  // Error handler (last)
   app.use(errorHandler);
-
   return app;
+}
+
+/** Serves the built SPA from the same origin; unknown non-API GETs get index.html. */
+function serveWebApp(app: Express): void {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const dir = env.WEB_DIST_DIR
+    ? path.resolve(env.WEB_DIST_DIR)
+    : path.resolve(here, '../../web/dist');
+  const index = path.join(dir, 'index.html');
+  if (!fs.existsSync(index)) {
+    logger.warn({ dir }, 'Web app build not found; only the API will be served');
+    return;
+  }
+  app.use(
+    express.static(dir, {
+      index: false,
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, file) => {
+        if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+      },
+    }),
+  );
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(index);
+  });
 }
