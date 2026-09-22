@@ -34,7 +34,7 @@ jobs:
       # The API tests create this database and a schema per test file.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leados_v2_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # pnpm version comes from `packageManager` in package.json.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
