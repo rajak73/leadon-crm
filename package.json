@@ -40,5 +40,9 @@
   "lint-staged": {
     "*.{ts,tsx,js,json,md}": "prettier --write"
   },
-  "pnpm": {}
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "^8.0.0"
+    }
+  }
 }
